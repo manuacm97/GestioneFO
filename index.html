@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0B0F14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<title>FO Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0F14; --surf:#131A22; --surf2:#1A2330; --line:#232E3C; --line2:#2E3B4C;
+  --txt:#E8EDF4; --mut:#8B98A9; --dim:#5C6B7E;
+  --acc:#4F8CFF; --pos:#34D399; --neg:#F87171; --warn:#FBBF24; --gold:#E7B94C;
+  --rP:#F59E0B; --rD:#10B981; --rC:#3B82F6; --rA:#EF4444;
+  --nav-h:62px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:15px}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px);min-height:100vh}
+h1,h2,h3{letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+button{cursor:pointer;border:none;background:none;color:inherit;font-family:inherit;font-size:inherit}
+input,select,textarea{font-family:inherit;font-size:1rem;color:var(--txt);background:var(--surf2);border:1px solid var(--line2);border-radius:4px;padding:10px 12px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238B98A9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+
+/* ---- Top bar ---- */
+#top{position:sticky;top:0;z-index:30;background:rgba(11,15,20,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px}
+#crest{width:44px;height:44px;border-radius:4px;background:linear-gradient(135deg,#1E3A2B,#0F1F15);border:1px solid var(--line2);display:grid;place-items:center;font-weight:900;font-size:.95rem;color:var(--gold);flex:none;overflow:hidden;cursor:pointer;padding:0}
+#crest.haslogo{background:none;border-color:transparent}
+#crest img{width:100%;height:100%;object-fit:contain;background:transparent;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+#wmark{position:fixed;right:-46px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 26px);width:320px;height:320px;object-fit:contain;opacity:.06;pointer-events:none;z-index:0;-webkit-mask-image:radial-gradient(closest-side,#000 50%,transparent 100%);mask-image:radial-gradient(closest-side,#000 50%,transparent 100%)}
+main{position:relative;z-index:1}
+#top .who{min-width:0;flex:1}
+#top .who .nm{font-weight:800;font-size:1.1rem;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15;letter-spacing:-.01em}
+#top .who .ss{font-size:.68rem;color:var(--mut);letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+#budgetChip{flex:none;text-align:right}
+#budgetChip .l{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700}
+#budgetChip .v{font-weight:900;font-size:1.3rem;line-height:1.1;color:var(--pos)}
+
+main{max-width:820px;margin:0 auto;padding:12px 12px 0}
+.page{display:none}.page.on{display:block;animation:fade .16s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.page.on{animation:none}.sheet-panel{transition:none!important}}
+
+/* ---- KPI strip: scroll su mobile, wrap su desktop ---- */
+.strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.strip::-webkit-scrollbar{display:none}
+@media(min-width:640px){.strip{flex-wrap:wrap;overflow:visible}}
+.kpi{flex:none;min-width:112px;background:var(--surf);border:1px solid var(--line);border-radius:4px;padding:9px 12px}
+@media(min-width:640px){.kpi{flex:1 1 auto}}
+.kpi .l{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);font-weight:700;white-space:nowrap}
+.kpi .v{font-weight:900;font-size:1.25rem;line-height:1.15;margin-top:3px;letter-spacing:-.02em}
+.kpi.ok .v{color:var(--pos)}.kpi.ko .v{color:var(--neg)}.kpi.md .v{color:var(--warn)}.kpi.au .v{color:var(--gold)}
+
+/* ---- Panels & rows ---- */
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px}
+.sect{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--surf2);border-bottom:1px solid var(--line);font-weight:800;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.sect .cnt{color:var(--dim);font-size:.72rem;letter-spacing:.03em}
+.item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left;transition:background .12s}
+.item:last-child{border-bottom:none}
+.item:hover{background:rgba(79,140,255,.05)}
+.item:active{background:var(--surf2)}
+.item.out{opacity:.55}
+.item .mid{flex:1;min-width:0}
+.item .t1{font-weight:700;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.item .t1 .nm-txt{overflow:hidden;text-overflow:ellipsis}
+.item .t2{font-size:.76rem;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px}
+.item .right{flex:none;text-align:right}
+.item .r1{font-weight:900;font-size:1.05rem;line-height:1.1;letter-spacing:-.02em}
+.item .r2{font-size:.7rem;color:var(--mut);margin-top:1px}
+.empty{padding:26px 16px;text-align:center;color:var(--dim);font-size:.9rem}
+
+/* role badges */
+.rb{display:inline-grid;place-items:center;min-width:26px;height:20px;padding:0 4px;border-radius:3px;font-weight:800;font-size:.72rem;color:#fff}
+.rb.P{background:var(--rP);color:#1a1102}.rb.D{background:var(--rD);color:#04120c}.rb.C{background:var(--rC)}.rb.A{background:var(--rA)}
+.rb.x{background:var(--surf2);color:var(--dim);border:1px solid var(--line2)}
+.rbs{display:flex;flex-direction:column;gap:2px;flex:none;width:30px;align-items:center}
+.rbs .rb{width:100%}
+.chip{display:inline-block;font-size:.62rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:3px;padding:2px 6px;background:var(--surf2);color:var(--mut);border:1px solid var(--line2);white-space:nowrap}
+.chip.warn{color:var(--warn);border-color:rgba(251,191,36,.4)}
+.chip.pos{color:var(--pos);border-color:rgba(52,211,153,.35)}
+.chip.neg{color:var(--neg);border-color:rgba(248,113,113,.35)}
+.chip.acc{color:var(--acc);border-color:rgba(79,140,255,.4)}
+.chip.gold{color:var(--gold);border-color:rgba(231,185,76,.45)}
+/* status tags accanto al nome */
+.st{display:inline-grid;place-items:center;height:16px;padding:0 4px;border-radius:3px;font-size:.58rem;font-weight:900;letter-spacing:.04em;flex:none}
+.st.u21{background:rgba(79,140,255,.15);color:var(--acc);border:1px solid rgba(79,140,255,.4)}
+.st.gr{background:rgba(139,152,169,.15);color:var(--mut);border:1px solid var(--line2)}
+.st.cp{background:rgba(52,211,153,.12);color:var(--pos);border:1px solid rgba(52,211,153,.35)}
+.st.pr{background:rgba(167,139,250,.12);color:#A78BFA;border:1px solid rgba(167,139,250,.35)}
+.st.outb{background:rgba(248,113,113,.1);color:var(--neg);border:1px solid rgba(248,113,113,.35)}
+
+/* dettaglio stipendi */
+.srow{display:flex;align-items:center;gap:6px;padding:6px 14px;border-bottom:1px solid var(--line);font-size:.84rem}
+.srow:last-child{border-bottom:none}
+.srow .sr-n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px}
+.srow .sr-v{width:64px;text-align:right;flex:none;color:var(--mut)}
+.srow.srhead{font-size:.64rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:800}
+.srow.srhead .sr-v{color:var(--dim)}
+.srow.srtot{font-weight:800;background:var(--surf2)}
+.srow.srtot .sr-v{color:var(--txt)}
+.srow.srout{opacity:.5}
+
+/* avatar giocatori */
+.avatar{width:40px;height:40px;border-radius:4px;object-fit:cover;background:var(--surf2);border:none;flex:none;display:block}
+/* avatar composito stile FM: faccia + maglia home colorata */
+.fmav{position:relative;width:40px;height:40px;border-radius:4px;overflow:hidden;flex:none;background:linear-gradient(180deg,#16202C 0%,#0E141B 100%)}
+.fmav svg{position:absolute;left:50%;bottom:-8%;transform:translateX(-50%);width:104%;height:auto;z-index:1}
+.fmav .face{position:absolute;left:50%;top:4%;transform:translateX(-50%);width:56%;height:56%;object-fit:cover;border-radius:50%;z-index:2;background:var(--surf2)}
+
+/* team badge */
+.tb{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(255,255,255,.25);flex:none;vertical-align:-2px}
+
+/* amounts */
+.amt{font-weight:900;font-size:1rem;letter-spacing:-.02em}
+.amt.p{color:var(--pos)}.amt.m{color:var(--neg)}.amt.z{color:var(--dim)}
+.ico{flex:none;width:32px;height:32px;border-radius:4px;display:grid;place-items:center;font-weight:800;font-size:1rem}
+.ico.p{background:rgba(52,211,153,.12);color:var(--pos)}
+.ico.m{background:rgba(248,113,113,.10);color:var(--neg)}
+.ico.z{background:var(--surf2);color:var(--dim)}
+.ico.g{background:rgba(231,185,76,.12);color:var(--gold)}
+
+.banner{display:none;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.07);color:var(--warn);border-radius:4px;padding:10px 14px;font-size:.84rem;line-height:1.45;margin-bottom:12px}
+.banner.on{display:block}
+.hint{color:var(--dim);font-size:.76rem;line-height:1.45;padding:10px 14px}
+
+/* stats leaderboard */
+.lb-head{display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--line);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:800}
+.lb-head button{padding:9px 0;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+.lb-head button.sorton{color:var(--acc)}
+.lb-head .nm{flex:1;text-align:left}
+.lb-col{width:42px;text-align:center;flex:none}
+.lb-rcol{width:36px;flex:none;text-align:center}
+.lb-row{display:flex;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.lb-row:last-child{border-bottom:none}
+.lb-row:hover{background:rgba(79,140,255,.05)}
+.lb-rank{width:26px;flex:none;color:var(--dim);font-weight:700;font-size:.8rem}
+.lb-row .nm{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.9rem}
+.lb-row .nm .gone{color:var(--dim);font-weight:500;text-decoration:line-through}
+.lb-val{width:42px;text-align:center;flex:none;font-variant-numeric:tabular-nums;color:var(--mut);font-size:.9rem}
+.lb-val.hl{color:var(--gold);font-weight:800}
+.lb-val.qc{border-radius:3px;cursor:pointer;padding:4px 0;user-select:none}
+.lb-val.qc:hover{background:var(--surf2);color:var(--txt)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 2px 10px}
+.fchip{border:1px solid var(--line2);background:var(--surf);border-radius:3px;padding:5px 11px;font-size:.76rem;font-weight:700;color:var(--mut)}
+.fchip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.fchip.gold.on{background:var(--gold);border-color:var(--gold);color:#221803}
+
+/* page title */
+.ptitle{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 10px;gap:8px;flex-wrap:wrap}
+.ptitle h2{font-size:1.15rem;font-weight:800;text-transform:uppercase}
+.ptitle .act{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border-radius:4px;padding:8px 14px;font-weight:700;font-size:.85rem;background:var(--surf2);border:1px solid var(--line2)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#221803}
+.btn.dng{color:var(--neg);border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.06)}
+.btn:active{filter:brightness(1.15)}
+
+/* segmented sub-pages */
+.pageseg{display:flex;background:var(--surf);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px}
+.pageseg button{flex:1;padding:10px;font-weight:800;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.pageseg button.on{background:var(--acc);color:#fff}
+
+/* FAB */
+.fab{position:fixed;right:16px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px);z-index:35;width:52px;height:52px;border-radius:6px;background:var(--acc);color:#fff;font-size:1.7rem;display:grid;place-items:center;box-shadow:0 6px 18px rgba(79,140,255,.35)}
+.fab:active{transform:scale(.96)}
+
+/* bottom nav */
+#nav{position:fixed;left:0;right:0;bottom:0;z-index:40;height:calc(var(--nav-h) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:rgba(15,20,27,.97);backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex}
+#nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--dim);font-size:.62rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+#nav button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#nav button.on{color:var(--acc)}
+
+/* bottom sheet */
+#sheetWrap{position:fixed;inset:0;z-index:60;display:none}
+#sheetWrap.on{display:block}
+#sheetBg{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.sheet-panel{position:absolute;left:0;right:0;bottom:0;max-width:820px;margin:0 auto;max-height:88vh;overflow-y:auto;background:var(--surf);border-radius:8px 8px 0 0;border:1px solid var(--line2);border-bottom:none;padding:8px 16px calc(20px + env(safe-area-inset-bottom));transform:translateY(8px);transition:transform .18s ease}
+#sheetWrap.on .sheet-panel{transform:none}
+@media(min-width:640px){
+  #sheetWrap.on{display:grid;place-items:center;padding:24px}
+  .sheet-panel{position:relative;left:auto;right:auto;bottom:auto;width:min(560px,94vw);max-height:86vh;border-radius:8px;border:1px solid var(--line2);padding:8px 20px 20px;transform:translateY(6px) scale(.985);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  #sheetWrap.on .sheet-panel{transform:none}
+  .grab{display:none}
+}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line2);margin:6px auto 12px}
+.sheet-panel h3{font-size:1.15rem;font-weight:800;text-transform:uppercase;margin-bottom:12px}
+.f{margin-bottom:12px}
+.f label{display:block;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);font-weight:800;margin-bottom:5px}
+.frow{display:flex;gap:10px}
+.frow .f{flex:1}
+.seg{display:flex;background:var(--surf2);border:1px solid var(--line2);border-radius:4px;overflow:hidden}
+.seg button{flex:1;padding:10px;font-weight:700;color:var(--mut)}
+.seg button.on{background:var(--acc);color:#fff}
+.tgl{display:flex;align-items:center;justify-content:space-between;background:var(--surf2);border:1px solid var(--line2);border-radius:4px;padding:10px 12px}
+.tgl label{margin:0;font-size:.85rem;text-transform:none;letter-spacing:0;color:var(--txt);font-weight:600}
+.tgl input{width:20px;height:20px;accent-color:var(--acc)}
+.sheet-actions{display:flex;gap:10px;margin-top:16px}
+.sheet-actions .btn{flex:1;padding:12px;text-align:center;font-size:.95rem}
+.mini{font-size:.7rem;color:var(--dim);margin-top:4px;line-height:1.4}
+.autolink{color:var(--acc);font-size:.74rem;font-weight:700;background:none;border:none;padding:0}
+
+/* regolamento */
+details.art{border-bottom:1px solid var(--line)}
+details.art:last-child{border-bottom:none}
+details.art summary{cursor:pointer;padding:12px 14px;font-weight:700;font-size:.92rem;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
+details.art summary::-webkit-details-marker{display:none}
+details.art summary::after{content:'+';color:var(--acc);font-size:1.2rem;font-weight:400}
+details.art[open] summary::after{content:'–'}
+details.art .body{padding:0 14px 14px;color:var(--mut);font-size:.86rem;line-height:1.55}
+details.art .body b{color:var(--txt)}
+details.art .body table{width:100%;border-collapse:collapse;font-size:.78rem;margin:8px 0}
+details.art .body th{color:var(--acc);text-align:left;padding:4px 6px;border-bottom:1px solid var(--line2);font-weight:700}
+details.art .body td{padding:4px 6px;border-bottom:1px solid var(--line);color:var(--txt)}
+.rt{text-align:right}
+.artag{font-size:.66rem;color:var(--dim);font-weight:600;flex:none}
+.searchbar{margin-bottom:10px}
+
+/* storico */
+.seas-h{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.seas-h .yr{font-weight:900;font-size:1.1rem;letter-spacing:-.01em}
+.seas-h .sp{flex:1}
+.altro-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.altro-grid .btn{padding:14px;text-align:center}
+
+/* divise & bacheca */
+.kit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:14px}
+.kitcard{display:flex;flex-direction:column;gap:6px;background:none;padding:0;text-align:center}
+.kitbox{position:relative;aspect-ratio:3/3.4;border:1px solid var(--line);border-radius:4px;background:radial-gradient(120% 90% at 50% 0%,#1C2836 0%,#10161E 70%);display:grid;place-items:center;color:var(--dim);cursor:pointer;overflow:hidden;transition:border-color .15s}
+.kitcard:hover .kitbox{border-color:var(--line2)}
+.kitbox img{position:absolute;inset:8%;width:84%;height:84%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.45))}
+.kitbox svg{width:44%;height:auto;opacity:.5}
+.kitcap{font-size:.64rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.kitcap .add{color:var(--acc);font-weight:700;letter-spacing:0;text-transform:none;display:block;font-size:.68rem;margin-top:1px}
+.trof-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px 14px}
+.trof{border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--surf2);text-align:left;padding:0}
+.trof .timg{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#101820}
+.trof .tt{padding:8px 10px}
+.trof .tt .a{font-weight:800;font-size:.85rem}
+.trof .tt .b{font-size:.72rem;color:var(--mut);margin-top:2px;line-height:1.35}
+@media(min-width:700px){html{font-size:16px}}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <button id="crest">FO</button>
+  <div class="who">
+    <div class="nm" id="topName">La Mia Società</div>
+    <div class="ss" id="topSeason">Stagione 2026/27</div>
+  </div>
+  <button id="budgetChip" title="Vai al bilancio">
+    <div class="l">Budget</div>
+    <div class="v num" id="topBudget">—</div>
+  </button>
+</div>
+
+<img id="wmark" alt="" style="display:none">
+<main>
+
+<!-- ROSA -->
+<section class="page on" id="pg-rosa">
+  <div class="strip" id="rosaStrip"></div>
+  <div class="banner" id="rosaBanner"></div>
+  <div id="rosaList"></div>
+  <div class="panel">
+    <div class="sect" id="kitsTitle">Divise</div>
+    <div class="kit-grid" id="kitsGrid"></div>
+  </div>
+</section>
+
+<!-- BILANCIO -->
+<section class="page" id="pg-bilancio">
+  <div class="strip" id="bilStrip"></div>
+  <div class="panel">
+    <details class="art" id="stipDet">
+      <summary>Dettaglio stipendi &amp; rate <span class="artag" id="stipDetTot"></span></summary>
+      <div id="stipDetBody"></div>
+    </details>
+  </div>
+  <div class="panel">
+    <div class="sect">Movimenti <button class="autolink" id="editSaldoIni">Saldo iniziale</button></div>
+    <div id="opsList"></div>
+  </div>
+  <div class="panel">
+    <div class="sect">Rate, clausole & bonus <button class="autolink" id="addClau">+ Aggiungi</button></div>
+    <div id="clauList"></div>
+    <p class="hint">Importo positivo = incasso atteso, negativo = pagamento. Con "in proiezione" attivo l'importo entra nel saldo previsto alla scadenza.</p>
+  </div>
+  <div class="panel">
+    <div class="sect">Calcolatore plus / minus</div>
+    <div style="padding:12px 14px">
+      <div class="frow">
+        <div class="f"><label>Cifra acquisto</label><input type="number" step="0.1" id="pmAcq" inputmode="decimal"></div>
+        <div class="f"><label>Cifra vendita</label><input type="number" step="0.1" id="pmVen" inputmode="decimal"></div>
+        <div class="f"><label>Stagioni al club</label><input type="number" step="1" min="1" id="pmAnni" inputmode="numeric" placeholder="1"></div>
+      </div>
+      <div class="kpi" style="min-width:0"><div class="l">Plus / Minus</div><div class="v num" id="pmRisultato">—</div><div class="mini" id="pmDetail"></div></div>
+      <p class="mini">Formula: vendita − (acquisto ÷ stagioni di permanenza). Con i rinnovi annuali il cartellino si "riammortizza" ogni stagione, quindi il costo residuo scende con gli anni: è di fatto un ammortamento lineare, la versione FO della plusvalenza reale. Con 1 stagione coincide con vendita − acquisto.</p>
+    </div>
+  </div>
+</section>
+
+<!-- MERCATO -->
+<section class="page" id="pg-mercato">
+  <div class="strip" id="mktStrip"></div>
+  <div class="banner" id="mktBanner"></div>
+  <div class="panel">
+    <div class="sect">Lista provvisoria <span class="cnt" id="mktCount"></span></div>
+    <div id="mktList"></div>
+    <p class="hint">L'offerta in lista vale il valore FO (art. 26.4); in busta serve ≥ valore FO, max 1 decimale (art. 27). Le proiezioni includono valore e stipendi dei nuovi acquisti.</p>
+  </div>
+</section>
+
+<!-- STATS + PALMARES -->
+<section class="page" id="pg-stats">
+  <div class="pageseg" id="statsSeg">
+    <button data-ss="gioc" class="on">Giocatori</button>
+    <button data-ss="palm">Palmares</button>
+  </div>
+
+  <div id="sub-gioc">
+    <div class="chips" id="statChips"></div>
+    <div class="panel">
+      <div class="lb-head" id="lbHead"></div>
+      <div id="statsList"></div>
+    </div>
+    <p class="hint" id="quickHint" style="display:none;padding:0 2px">⚡ Modalità rapida: clic su P, G o A per +1 · clic destro (o Shift+clic) per −1. Clicca di nuovo ⚡ per uscire.</p>
+  </div>
+
+  <div id="sub-palm" style="display:none">
+    <div class="panel">
+      <div class="sect">Piazzamenti</div>
+      <div id="palmList"></div>
+    </div>
+    <div class="panel">
+      <div class="sect">Bacheca trofei <button class="autolink" id="addTrofeo">+ Aggiungi</button></div>
+      <div class="trof-grid" id="trofGrid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ALTRO -->
+<section class="page" id="pg-altro">
+  <div class="ptitle"><h2>Altro</h2></div>
+  <div class="altro-grid">
+    <button class="btn" id="btnExport">⬇ Esporta backup</button>
+    <button class="btn" id="btnImport">⬆ Importa backup</button>
+    <input type="file" id="fileImport" accept=".json" style="display:none">
+    <button class="btn" id="btnClub">✎ Società, logo & stagione</button>
+    <button class="btn gold" id="btnArchive">🏁 Archivia stagione</button>
+  </div>
+
+  <div class="panel">
+    <div class="sect">Storico stagioni <button class="autolink" id="addSeason">+ Aggiungi</button></div>
+    <div id="seasonsList"></div>
+  </div>
+
+  <div class="panel">
+    <div class="sect">Regolamento · agg. giugno 2026</div>
+    <div style="padding:10px 14px 0"><input class="searchbar" type="search" id="regSearch" placeholder="Cerca… (buste, stadio, U21)"></div>
+    <div id="regWrap"></div>
+  </div>
+</section>
+
+</main>
+
+<button class="fab" id="fab" aria-label="Aggiungi">+</button>
+
+<nav id="nav">
+  <button data-p="rosa" class="on"><svg viewBox="0 0 24 24"><path d="M8 3 5 5 2 9l3 2v10h14V11l3-2-3-4-3-2a4 4 0 0 1-8 0z"/></svg>Rosa</button>
+  <button data-p="bilancio"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="1"/><path d="M3 10h18M7 15h4"/></svg>Bilancio</button>
+  <button data-p="mercato"><svg viewBox="0 0 24 24"><path d="M4 7h13M14 3l4 4-4 4M20 17H7M10 13l-4 4 4 4"/></svg>Mercato</button>
+  <button data-p="stats"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Stats</button>
+  <button data-p="altro"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Altro</button>
+</nav>
+
+<div id="sheetWrap" role="dialog" aria-modal="true">
+  <div id="sheetBg"></div>
+  <div class="sheet-panel"><div class="grab"></div><div id="sheetBody"></div></div>
+</div>
+
+<script>
+/* ====== FO MANAGER v3 ====== */
+const RUOLI=['PT','TD','TS','DC','ED','ES','CC','TQ','AD','AS','SP','P'];
+const REPARTO={PT:'P',TD:'D',TS:'D',DC:'D',ED:'C',ES:'C',CC:'C',TQ:'C',AD:'A',AS:'A',SP:'A',P:'A'};
+const STATUS=[['rosa','In rosa'],['comp','Comproprietà (in rosa)'],['compout','Comproprietà (fuori)'],['prestito','Prestito (in rosa)'],['prestout','Prestito (fuori)'],['primavera','Primavera U21']];
+const STATUS_LBL=Object.fromEntries(STATUS);
+const OUT_ST=['compout','prestout'];               // stipendio e rate NON contano
+const IN_ROSA_ST=['rosa','comp','prestito'];       // contano nei limiti e nel valore rosa (il grigio è un flag a parte)
+const LS_KEY='foManager_v1';
+
+const r1v=v=>Math.round(v*10)/10;
+const r2v=v=>Math.round(v*100)/100;
+const fmt=(v,d=1)=>(v==null||isNaN(v))?'—':Number(v).toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:d});
+const fmtDate=s=>{if(!s)return'';const d=new Date(s+'T00:00');return isNaN(d)?s:d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'2-digit'});};
+const stipAuto=v=>Math.ceil((Number(v)||0)*0.1*10-1e-9)/10;
+const rata1Auto=s=>Math.ceil((Number(s)||0)/2*20-1e-9)/20;
+const rata2Auto=s=>Math.floor((Number(s)||0)/2*10+1e-9)/10;
+const uid=()=>Math.random().toString(36).slice(2,9);
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n;};
+
+/* ---------- Colori squadre (Serie A / B / C) ---------- */
+const TEAMS={
+// Serie A
+'atalanta':['#1E71B8','#000000'],'bologna':['#A21C26','#12275B'],'cagliari':['#AD1F2C','#00234E'],
+'como':['#0B5394','#FFFFFF'],'cremonese':['#C8102E','#9FA4A9'],'fiorentina':['#5A2D8A','#FFFFFF'],
+'genoa':['#C8102E','#00205B'],'inter':['#1B4FA0','#000000'],'juventus':['#000000','#FFFFFF'],
+'lazio':['#87D8F7','#FFFFFF'],'lecce':['#F5B324','#C8102E'],'milan':['#E30613','#000000'],
+'napoli':['#199FD6','#FFFFFF'],'parma':['#FFD100','#1D428A'],'pisa':['#00205B','#000000'],
+'roma':['#8E1F2F','#F0BC42'],'sassuolo':['#00A752','#000000'],'torino':['#8A1E03','#FFFFFF'],
+'udinese':['#000000','#FFFFFF'],'verona':['#FFD100','#002F6C'],'hellas verona':['#FFD100','#002F6C'],
+// Serie B
+'avellino':['#00843D','#FFFFFF'],'bari':['#FFFFFF','#E30613'],'brescia':['#0072CE','#FFFFFF'],
+'carrarese':['#6CACE4','#FFD100'],'catanzaro':['#FFD100','#C8102E'],'cesena':['#000000','#FFFFFF'],
+'cittadella':['#7B2431','#FFFFFF'],'empoli':['#0057B8','#FFFFFF'],'frosinone':['#FFD100','#005CA9'],
+'juve stabia':['#FFD100','#0057B8'],'mantova':['#C8102E','#FFFFFF'],'modena':['#FFD100','#0A2240'],
+'monza':['#E30613','#FFFFFF'],'padova':['#FFFFFF','#C8102E'],'palermo':['#F8A9C4','#000000'],
+'pescara':['#6CACE4','#FFFFFF'],'reggiana':['#7B2431','#FFFFFF'],'salernitana':['#7B2431','#FFFFFF'],
+'sampdoria':['#0071CE','#C8102E'],'spezia':['#FFFFFF','#000000'],'sudtirol':['#FFFFFF','#E30613'],
+'venezia':['#000000','#F58220'],'virtus entella':['#6CACE4','#FFFFFF'],'entella':['#6CACE4','#FFFFFF'],
+// Serie C e seconde squadre
+'albinoleffe':['#0057B8','#87D8F7'],'alcione':['#F58220','#0A2240'],'alessandria':['#9FA4A9','#000000'],
+'ancona':['#C8102E','#FFFFFF'],'arezzo':['#9B1B30','#FFFFFF'],'ascoli':['#000000','#FFFFFF'],
+'atalanta u23':['#1E71B8','#000000'],'audace cerignola':['#FFD100','#0057B8'],'cerignola':['#FFD100','#0057B8'],
+'benevento':['#FFD100','#C8102E'],'bra':['#FFD100','#000000'],'campobasso':['#C8102E','#0057B8'],
+'casarano':['#C8102E','#0057B8'],'casertana':['#C8102E','#0057B8'],'catania':['#C8102E','#0057B8'],
+'cosenza':['#C8102E','#0057B8'],'crotone':['#C8102E','#0057B8'],'dolomiti bellunesi':['#FFD100','#0057B8'],
+'foggia':['#C8102E','#000000'],'forli':['#FFFFFF','#C8102E'],'giana erminio':['#0057B8','#FFFFFF'],
+'giugliano':['#FFD100','#0057B8'],'gubbio':['#C8102E','#0057B8'],'guidonia':['#C8102E','#0A2240'],
+'inter u23':['#1B4FA0','#000000'],'juventus next gen':['#000000','#FFFFFF'],'latina':['#0A2240','#000000'],
+'lecco':['#0057B8','#87D8F7'],'livorno':['#7B2431','#FFFFFF'],'lumezzane':['#C8102E','#0057B8'],
+'milan futuro':['#E30613','#000000'],'monopoli':['#FFFFFF','#00843D'],'novara':['#6CACE4','#FFFFFF'],
+'ospitaletto':['#F58220','#000000'],'perugia':['#C8102E','#FFFFFF'],'pianese':['#000000','#FFFFFF'],
+'picerno':['#C8102E','#0057B8'],'pineto':['#6CACE4','#FFFFFF'],'pontedera':['#7B2431','#FFFFFF'],
+'potenza':['#C8102E','#0057B8'],'pro patria':['#FFFFFF','#0057B8'],'pro vercelli':['#FFFFFF','#000000'],
+'ravenna':['#FFD100','#C8102E'],'renate':['#000000','#87D8F7'],'rimini':['#FFFFFF','#C8102E'],
+'salo':['#00843D','#0057B8'],'feralpisalo':['#00843D','#0057B8'],'sambenedettese':['#C8102E','#0057B8'],
+'siracusa':['#6CACE4','#FFFFFF'],'sorrento':['#C8102E','#000000'],'spal':['#6CACE4','#FFFFFF'],
+'ternana':['#C8102E','#00843D'],'trapani':['#7B2431','#FFFFFF'],'trento':['#FFD100','#0057B8'],
+'triestina':['#C8102E','#FFFFFF'],'team altamura':['#FFFFFF','#C8102E'],'altamura':['#FFFFFF','#C8102E'],
+'union brescia':['#0072CE','#FFFFFF'],'vicenza':['#C8102E','#FFFFFF'],'lr vicenza':['#C8102E','#FFFFFF'],
+'virtus verona':['#C8102E','#0057B8'],'vis pesaro':['#C8102E','#FFFFFF'],
+};
+const normTeam=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'').trim();
+function teamColors(name){
+  const n=normTeam(name); if(!n)return null;
+  if(TEAMS[n])return TEAMS[n];
+  for(const k of Object.keys(TEAMS)){ if(n===k||n.includes(k)||k.includes(n))return TEAMS[k]; }
+  return null;
+}
+function teamBadge(name){
+  const c=teamColors(name);
+  const sp=document.createElement('span'); sp.className='tb';
+  if(c)sp.style.background=`linear-gradient(90deg,${c[0]} 50%,${c[1]} 50%)`;
+  else{sp.style.background='var(--surf2)';}
+  sp.title=name||'';
+  return sp;
+}
+
+/* ---------- STATO INIZIALE (dati dal tuo Excel) ---------- */
+function defaultState(){
+  const P=(nome,a,b,c,u,sq,val,st,ra,rb)=>({id:uid(),nome,r1:a,r2:b||'',r3:c||'',u21:!!u,grigio:false,img:'',squadra:sq,valore:val,stip:st,rata1:ra,rata2:rb,status:'rosa'});
+  return {
+    v:4,club:'La Mia Società',season:'2026/27',saldoIniziale:30.9,logo:'',kits:['','',''],
+    rosa:[
+      P('Lukasz Skorupski','PT','','',0,'Bologna',8.2,0.9,0.45,0.4),
+      P('Federico Ravaglia','PT','','',0,'Bologna',1.5,0.2,0.10,0.1),
+      P('Massimo Pessina','PT','','',0,'Bologna',0,0,0,0),
+      P('Simone Canestrelli','DC','','',0,'Pisa',7.0,0.8,0.40,0.4),
+      P('Berat Djimsiti','DC','','',0,'Atalanta',6.0,0.7,0.35,0.3),
+      P('Jacobo Ramon','DC','','',0,'Como',5.8,0.7,0.35,0.3),
+      P('Oumar Solet','DC','','',0,'Udinese',22.7,2.5,1.25,1.2),
+      P('Dodò','TD','ED','',0,'Fiorentina',24.0,2.4,1.20,1.2),
+      P('Gabriele Zappa','TD','ED','',0,'Cagliari',6.8,0.8,0.40,0.4),
+      P('Josh Doig','TS','ES','',0,'Sassuolo',5.0,0.5,0.25,0.2),
+      P('Giuseppe Pezzella','TS','ES','',0,'Cremonese',4.1,0.4,0.20,0.2),
+      P('Ivan Smolcic','TD','ED','',0,'Como',1.8,0.2,0.10,0.1),
+      P('Gianluca Gaetano','CC','TQ','',0,'Atalanta',4.0,0.4,0.20,0.2),
+      P('Jakub Piotrowski','CC','','',0,'Udinese',4.5,0.6,0.30,0.3),
+      P('Luka Modric','CC','','',0,'Milan',4.8,0.6,0.30,0.3),
+      P('Nicolas Kuhn','AD','AS','',0,'Como',12.0,1.3,0.65,0.6),
+      P('Matias Soule','AD','SP','',0,'Roma',41.4,4.5,2.25,2.2),
+      P('Oliver Sorensen','CC','','',0,'Parma',7.0,0.8,0.40,0.4),
+      P('Jari Vandeputte','TQ','AS','',0,'Cremonese',4.0,0.4,0.20,0.2),
+      P('Rafael Leao','SP','P','',0,'Milan',70.0,7.7,3.85,3.8),
+      P('Jamie Vardy','P','','',0,'Cremonese',1.0,0.1,0.05,0.0),
+      P('Antoine Bernede','CC','','',0,'Verona',2.5,0.3,0.15,0.1),
+      P('Riyad Idrissi','TS','ES','',0,'Cagliari',1.0,0.1,0.05,0.0),
+      P('Lorenzo Venturino','AD','AS','',0,'Genoa',1.5,0.2,0.10,0.1),
+      P('Antonio Vergara','TQ','','',0,'Napoli',7.7,0.9,0.45,0.4),
+      P('Gabriel Strefezza','AD','AS','',0,'Parma',7.0,0.8,0.40,0.4),
+    ],
+    ops:[
+      {id:uid(),data:'2026-07-01',op:'Pagamento seconda rata stadio',dare:'',avere:22,pm:''},
+      {id:uid(),data:'2026-07-01',op:'Manutenzione ordinaria Stadio',dare:'',avere:6,pm:''},
+      {id:uid(),data:'2026-06-22',op:'Rimborso Cmp Bernede',dare:1.6,avere:'',pm:''},
+      {id:uid(),data:'2026-07-01',op:'Extrabudget emesso dalla Federazione',dare:30,avere:'',pm:''},
+    ],
+    clausole:[
+      {id:uid(),desc:'Doig: bonus −1 a 27 presenze (prestito)',imp:-1,scad:'fine',incl:false},
+      {id:uid(),desc:'Doig: +5 per diritto di riscatto',imp:5,scad:'fine',incl:false},
+    ],
+    stats:[
+      ['Oumar Solet',31,2,1,0],['Luka Modric',29,2,2,0],['Matias Soule',28,5,5,0],['Jacobo Ramon',26,2,0,0],
+      ['Rafael Leao',25,8,2,0],['Jakub Piotrowski',22,1,0,0],['Giuseppe Pezzella',22,0,0,0],['Jamie Vardy',21,6,0,0],
+      ['Antoine Bernede',21,1,1,0],['Berat Djimsiti',20,0,0,0],['Gabriele Zappa',17,0,2,0],['Federico Ravaglia',16,0,0,0],
+      ['Simone Canestrelli',16,0,0,0],['Riyad Idrissi',15,1,0,0],['Oliver Sorensen',15,1,0,0],['Lukasz Skorupski',14,0,0,0],
+      ['Gianluca Gaetano',14,0,2,0],['Ivan Smolcic',14,0,1,0],['Dodò',13,0,0,0],['Gabriel Strefezza',13,1,2,0],
+      ['Saul Coco',11,0,0,1],['Nicolas Kuhn',10,0,0,0],['Jari Vandeputte',8,1,1,0],['Nikola Stulic',7,2,0,1],
+      ['Gaetano Oristanio',7,0,0,1],['Josh Doig',6,0,0,0],['Abdou Harroui',6,1,0,1],['Antonio Vergara',6,0,0,0],
+      ['Mattia Felici',5,0,1,1],['Massimo Pessina',3,0,0,0],['Lorenzo Venturino',2,0,0,0],['Michele Collocolo',1,0,0,1],
+    ].map(s=>({id:uid(),nome:s[0],p:s[1],g:s[2],a:s[3],gone:!!s[4],ruolo:''})),
+    mercato:[],palmares:[],trofei:[],
+    seasons:[{
+      id:uid(),name:'2025/26',saldoIniziale:300,kits:['','',''],note:'Clausole: 03/06/26 El Aynaoui +7 · Doig −1 a 27 presenze e +5 diritto riscatto · 03/06/26 Stulic +3',
+      ops:[
+        {id:uid(),data:'2025-07-21',op:'Pagamento prima rata stadio',dare:'',avere:20,pm:''},
+        {id:uid(),data:'2025-07-21',op:'Manutenzione ordinaria',dare:'',avere:6,pm:''},
+        {id:uid(),data:'2025-09-12',op:'Acquisti liste estive',dare:'',avere:264.4,pm:''},
+        {id:uid(),data:'2025-09-16',op:'Premio 1ª Giornata FO Cup',dare:2,avere:'',pm:''},
+        {id:uid(),data:'2025-09-23',op:'Svincolo STR Calvin Stengs',dare:2.8,avere:'',pm:-4.2},
+        {id:uid(),data:'2025-09-23',op:'Acquisto Oliver Sorensen (7) e Mattia Felici (2,8)',dare:'',avere:9.8,pm:''},
+        {id:uid(),data:'2025-09-30',op:'Acquisto Antoine Bernede',dare:'',avere:2.5,pm:''},
+        {id:uid(),data:'2025-10-02',op:'Ceduto Neil El Aynaoui al Real Orgoglio (7+7)',dare:7,avere:'',pm:-1},
+        {id:uid(),data:'2025-10-06',op:'Premio 3ª Giornata Serie D/B',dare:2,avere:'',pm:''},
+        {id:uid(),data:'2025-10-06',op:'Svincolo STR Michele Collocolo',dare:1.2,avere:'',pm:-1.8},
+        {id:uid(),data:'2025-10-22',op:'Premio 4ª Giornata Serie D/B e FO Cup I turno',dare:3,avere:'',pm:''},
+        {id:uid(),data:'2025-10-27',op:'Premio 5ª Giornata Serie D/B',dare:4,avere:'',pm:''},
+        {id:uid(),data:'2025-10-30',op:'Premio passaggio 1° turno FO Cup',dare:2,avere:'',pm:''},
+        {id:uid(),data:'2025-11-10',op:'Multa non raggiungimento 11 titolari (Skorupski, Ravaglia)',dare:'',avere:1,pm:''},
+        {id:uid(),data:'2025-11-25',op:'Premio 9ª Giornata Serie D/B',dare:1,avere:'',pm:''},
+        {id:uid(),data:'2025-12-02',op:'Premio 10ª Giornata Serie D/B',dare:2,avere:'',pm:''},
+        {id:uid(),data:'2025-12-16',op:'Premio 12ª Giornata Serie D/B',dare:1,avere:'',pm:''},
+        {id:uid(),data:'2025-12-16',op:'Acquisto Ivan Smolcic (1,8) e Gianluca Gaetano (4)',dare:'',avere:5.8,pm:''},
+        {id:uid(),data:'2025-12-30',op:'Premio 13ª giornata Serie D/B',dare:1,avere:'',pm:''},
+        {id:uid(),data:'2025-12-30',op:'Premio passaggio 2° turno FO Cup',dare:4,avere:'',pm:''},
+        {id:uid(),data:'2025-12-30',op:'Prima Parte Stipendi Giocatori',dare:'',avere:13.6,pm:''},
+        {id:uid(),data:'2026-01-02',op:'Svincolo STR Mattia Felici',dare:1.3,avere:'',pm:-1.7},
+        {id:uid(),data:'2026-01-05',op:'Scambio Prestiti Dodò–Saul Coco con Galacticos',dare:'',avere:'',pm:''},
+        {id:uid(),data:'2026-01-05',op:'Ceduto Doig in prestito con diritto',dare:1,avere:'',pm:''},
+        {id:uid(),data:'2026-01-09',op:'Premio 15ª giornata Serie D/B',dare:1,avere:'',pm:''},
+        {id:uid(),data:'2026-01-20',op:'Ceduto Oristanio per Vandeputte e conguaglio',dare:3,avere:'',pm:0.7},
+        {id:uid(),data:'2026-02-05',op:'Acquisto Antonio Vergara (7,7) e Gabriel Strefezza (7)',dare:'',avere:14.7,pm:''},
+        {id:uid(),data:'2026-02-06',op:'Cessione Nikola Stulic ai Galacticos (2+3)',dare:2,avere:'',pm:0.8},
+        {id:uid(),data:'2026-02-24',op:'Svincolo Ordinario Abdou Harroui',dare:'',avere:1,pm:-2.8},
+        {id:uid(),data:'2026-03-03',op:'Premio 23ª giornata Serie D/B',dare:2,avere:'',pm:''},
+        {id:uid(),data:'2026-05-12',op:'Premio 32ª giornata Serie D/B',dare:2,avere:'',pm:''},
+        {id:uid(),data:'2026-05-18',op:'Premio 33ª giornata Serie D/B',dare:1,avere:'',pm:''},
+        {id:uid(),data:'2026-05-28',op:'Seconda parte Stipendi Giocatori',dare:'',avere:11.6,pm:''},
+        {id:uid(),data:'2026-05-28',op:'Seconde Rate El Aynaoui e Stulic',dare:10,avere:'',pm:''},
+        {id:uid(),data:'2026-05-28',op:'Bonus Presenze Prestito Doig',dare:1,avere:'',pm:''},
+        {id:uid(),data:'2026-06-14',op:'Premio 10° Posto Serie D/B',dare:24,avere:'',pm:''},
+      ]
+    }]
+  };
+}
+let S;
+try{S=JSON.parse(localStorage.getItem(LS_KEY))||defaultState();}catch(e){S=defaultState();}
+/* migrazione da v1/v2 */
+if(!S.v||S.v<3){
+  (S.rosa||[]).forEach(p=>{if(p.status==='prestito')p.status='prestout';if(p.status==='comp')p.status='compout';});
+  S.v=3;
+}
+/* migrazione v4: grigio diventa un flag combinabile con gli altri status */
+if(S.v<4){
+  (S.rosa||[]).forEach(p=>{if(p.status==='grigio'){p.status='rosa';p.grigio=true;}});
+  S.v=4;
+}
+(S.rosa||[]).forEach(p=>{if(p.grigio===undefined)p.grigio=false;if(p.img===undefined)p.img='';});
+if(!S.seasons)S.seasons=[]; if(!S.mercato)S.mercato=[]; if(!S.clausole)S.clausole=[];
+if(!S.palmares)S.palmares=[]; if(!S.trofei)S.trofei=[]; if(!S.kits)S.kits=['','',''];
+if(S.logo===undefined)S.logo='';
+S.seasons.forEach(se=>{if(!se.kits)se.kits=['','',''];});
+(S.stats||[]).forEach(s=>{if(s.ruolo===undefined)s.ruolo='';});
+function save(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(S));}
+  catch(e){alert('Attenzione: spazio locale esaurito (le immagini pesano). L\u2019ultima modifica potrebbe non essere salvata: rimuovi qualche immagine o riducile, poi riprova. Esporta un backup per sicurezza.');}
+}
+
+/* ---------- helpers DOM ---------- */
+const $=s=>document.querySelector(s);
+const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);
+ for(const[k,v]of Object.entries(attrs)){if(k==='class')n.className=v;else if(k.startsWith('on'))n.addEventListener(k.slice(2),v);else if(k==='html')n.innerHTML=v;else n.setAttribute(k,v);}
+ kids.forEach(k=>n.append(k));return n;};
+
+function pickImage(maxDim,cb){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+  inp.onchange=()=>{const f=inp.files[0];if(!f)return;
+    const rd=new FileReader();
+    rd.onload=()=>{const im=new Image();
+      im.onload=()=>{
+        const sc=Math.min(1,maxDim/Math.max(im.width,im.height));
+        const cv=document.createElement('canvas');
+        cv.width=Math.max(1,Math.round(im.width*sc));cv.height=Math.max(1,Math.round(im.height*sc));
+        cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+        let url='';try{url=cv.toDataURL('image/webp',.85);if(!url.startsWith('data:image/webp'))url=cv.toDataURL('image/png');}catch(e){url=String(rd.result);}
+        cb(url);
+      };
+      im.src=rd.result;};
+    rd.readAsDataURL(f);};
+  inp.click();
+}
+
+/* ---------- calcoli ---------- */
+function calc(){
+  const paga=S.rosa.filter(p=>!OUT_ST.includes(p.status));      // stipendi e rate
+  const inRosa=S.rosa.filter(p=>IN_ROSA_ST.includes(p.status)); // limiti e valore rosa
+  const sumVal=inRosa.reduce((a,p)=>a+num(p.valore),0);
+  const sumStip=paga.reduce((a,p)=>a+num(p.stip),0);
+  const sumR1=paga.reduce((a,p)=>a+num(p.rata1),0);
+  const sumR2=paga.reduce((a,p)=>a+num(p.rata2),0);
+  const dare=S.ops.reduce((a,o)=>a+num(o.dare),0), avere=S.ops.reduce((a,o)=>a+num(o.avere),0);
+  const saldo=num(S.saldoIniziale)+dare-avere;
+  const clM=S.clausole.filter(c=>c.incl&&c.scad==='meta').reduce((a,c)=>a+num(c.imp),0);
+  const clF=S.clausole.filter(c=>c.incl&&c.scad==='fine').reduce((a,c)=>a+num(c.imp),0);
+  const mid=saldo-sumR1+clM, end=mid-sumR2+clF;
+  const pmTot=S.ops.reduce((a,o)=>a+num(o.pm),0);
+  const nPT=inRosa.filter(p=>p.r1==='PT').length;
+  const nMov=inRosa.filter(p=>p.r1!=='PT').length;
+  const nPrim=S.rosa.filter(p=>p.status==='primavera').length;
+  return{sumVal,sumStip,sumR1,sumR2,saldo,mid,end,pmTot,nPT,nMov,nPrim,clM,clF};
+}
+function mktCalc(c){
+  const rows=S.mercato.filter(m=>m.nome||num(m.vm));
+  const totVM=rows.reduce((a,m)=>a+num(m.vm),0);
+  const t1=rows.reduce((a,m)=>a+num(m.rata1),0), t2=rows.reduce((a,m)=>a+num(m.rata2),0);
+  const after=c.saldo-totVM;
+  const mid=after-c.sumR1-t1+c.clM, end=mid-c.sumR2-t2+c.clF;
+  return{n:rows.length,totVM,after,mid,end,t1,t2};
+}
+function seasonCalc(se){
+  const dare=se.ops.reduce((a,o)=>a+num(o.dare),0),avere=se.ops.reduce((a,o)=>a+num(o.avere),0);
+  return{saldo:num(se.saldoIniziale)+dare-avere,pm:se.ops.reduce((a,o)=>a+num(o.pm),0)};
+}
+
+function kpi(lbl,val,cls=''){return el('div',{class:'kpi '+cls},el('div',{class:'l'},lbl),el('div',{class:'v num'},val));}
+
+/* ---------- BOTTOM SHEET ---------- */
+function openSheet(build){
+  const body=$('#sheetBody'); body.innerHTML='';
+  build(body);
+  $('#sheetWrap').classList.add('on');
+  document.body.style.overflow='hidden';
+}
+function closeSheet(){
+  $('#sheetWrap').classList.remove('on');
+  document.body.style.overflow='';
+}
+$('#sheetBg').addEventListener('click',closeSheet);
+
+function fld(lbl,input,extra){const f=el('div',{class:'f'},el('label',{},lbl),input);if(extra)f.append(extra);return f;}
+function tin(val,type='text',step,attrs={}){const i=el('input',{type,...attrs});if(step)i.step=step;if(type==='number')i.setAttribute('inputmode','decimal');i.value=(val===0?'0':(val??''));return i;}
+function tsel(opts,val){const s=el('select');opts.forEach(o=>{const[v,l]=Array.isArray(o)?o:[o,o];s.append(el('option',{value:v},l));});s.value=val??'';return s;}
+function toggle(lbl,checked){const c=el('input',{type:'checkbox'});c.checked=!!checked;return{node:el('div',{class:'tgl'},el('label',{},lbl),c),cb:c};}
+function actions(onSave,onDelete,delLbl='Elimina'){
+  const w=el('div',{class:'sheet-actions'});
+  if(onDelete)w.append(el('button',{class:'btn dng',onclick:onDelete},delLbl));
+  w.append(el('button',{class:'btn pri',onclick:onSave},'Salva'));
+  return w;
+}
+const SILH="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%231A2330'/%3E%3Ccircle cx='20' cy='15' r='7' fill='%232E3B4C'/%3E%3Cpath d='M6 40c0-8 6-13 14-13s14 5 14 13z' fill='%232E3B4C'/%3E%3C/svg%3E";
+function avatar(src,size){
+  return el('img',{class:'avatar',src:src||SILH,alt:'',style:size?`width:${size}px;height:${size}px`:''});
+}
+/* composito stile Football Manager: busto con maglia home (colori squadra reale) + faccia */
+function jerseySVG(c1,c2){
+  return `<svg viewBox="0 0 60 34" xmlns="http://www.w3.org/2000/svg">`+
+    `<path d="M18 4 4 10l4 12 6-2v14h32V20l6 2 4-12L42 4c-2.5 4.5-7 7-12 7S20.5 8.5 18 4z" fill="${c1}" stroke="rgba(0,0,0,.35)" stroke-width="1.4" stroke-linejoin="round"/>`+
+    `<path d="M18 4c2.5 4.5 7 7 12 7s9.5-2.5 12-7l-4-1.8C36 5.8 33 7 30 7s-6-1.2-8-4.8z" fill="${c2}" stroke="rgba(0,0,0,.3)" stroke-width="1"/>`+
+    `<path d="M4 10l4 12 6-2-3.5-13z" fill="${c2}" opacity=".85"/>`+
+    `<path d="M56 10l-4 12-6-2 3.5-13z" fill="${c2}" opacity=".85"/>`+
+  `</svg>`;
+}
+function fmAvatar(img,squadra,size){
+  if(!img)return avatar('',size);
+  const c=teamColors(squadra)||['#2E3B4C','#1A2330'];
+  const w=el('span',{class:'fmav',style:size?`width:${size}px;height:${size}px`:''});
+  w.innerHTML=jerseySVG(c[0],c[1]);
+  w.append(el('img',{class:'face',src:img,alt:''}));
+  return w;
+}
+function photoOf(nome){
+  const nm=String(nome||'').toLowerCase();
+  const p=S.rosa.find(p=>(p.nome||'').toLowerCase()===nm);
+  return p?{img:p.img,squadra:p.squadra}:{img:'',squadra:''};
+}
+function statusTags(p){
+  const tags=[];
+  if(p.u21)tags.push(el('span',{class:'st u21'},'U21'));
+  if(p.grigio)tags.push(el('span',{class:'st gr',title:'Grigio: resta in rosa e nei calcoli, rimborsabile (art. 43)'},'GRIGIO'));
+  if(p.status==='comp')tags.push(el('span',{class:'st cp',title:'Comproprietà (in rosa)'},'CP'));
+  if(p.status==='compout')tags.push(el('span',{class:'st outb',title:'Comproprietà fuori rosa: stipendio escluso dai calcoli'},'CP OUT'));
+  if(p.status==='prestito')tags.push(el('span',{class:'st pr',title:'In prestito (in rosa)'},'PR'));
+  if(p.status==='prestout')tags.push(el('span',{class:'st outb',title:'Ceduto in prestito: stipendio escluso dai calcoli'},'PR OUT'));
+  if(p.status==='primavera')tags.push(el('span',{class:'st u21',title:'Fuori rosa Primavera'},'PRIM'));
+  return tags;
+}
+
+/* ---------- ROSA ---------- */
+const GRUPPI=[['P','Portieri'],['D','Difesa'],['C','Centrocampo'],['A','Attacco'],['PRIM','Primavera U21'],['X','Altri']];
+function grpOf(p){
+  if(p.status==='primavera')return'PRIM';
+  return REPARTO[p.r1]||'X';
+}
+function renderRosa(){
+  const c=calc();
+  const st=$('#rosaStrip'); st.innerHTML='';
+  st.append(
+    kpi('Portieri',c.nPT+'/3',(c.nPT<2||c.nPT>3)?'ko':'ok'),
+    kpi('Movimento',c.nMov+'/22',(c.nMov<16||c.nMov>22)?'ko':'ok'),
+    kpi('Primavera',c.nPrim+'/3',c.nPrim>3?'ko':''),
+    kpi('Valore rosa',fmt(r1v(c.sumVal)),'au'),
+    kpi('Stipendi',fmt(r2v(c.sumStip),2)),
+    kpi('1ª rata · 31/12',fmt(r2v(c.sumR1),2)),
+    kpi('2ª rata · fine',fmt(r2v(c.sumR2),2))
+  );
+  const msgs=[];
+  if(c.nMov>22)msgs.push(`Movimento oltre il limite (${c.nMov}/22, art. 2): alla verifica scatta l\u2019esclusione degli eccedenti + ammenda per calciatore (art. 5).`);
+  if(c.nPT>3)msgs.push('Troppi portieri (max 3).');
+  if(c.nPT<2||c.nMov<16)msgs.push('Sotto i minimi (16+2): a una partita ufficiale scatta l\u2019esonero (art. 5.2)!');
+  if(c.nPrim>3)msgs.push('Più di 3 U21 in Primavera (art. 4).');
+  const bn=$('#rosaBanner'); bn.className='banner'+(msgs.length?' on':''); bn.textContent=msgs.join(' ');
+
+  const wrap=$('#rosaList'); wrap.innerHTML='';
+  GRUPPI.forEach(([g,lbl])=>{
+    const players=S.rosa.filter(p=>grpOf(p)===g);
+    if(!players.length&&(g==='X'||g==='PRIM'))return;
+    const panel=el('div',{class:'panel'});
+    panel.append(el('div',{class:'sect'},lbl,el('span',{class:'cnt'},String(players.length))));
+    if(!players.length)panel.append(el('div',{class:'empty'},'Nessun giocatore'));
+    players.forEach(p=>{
+      const badges=el('div',{class:'rbs'});
+      [p.r1,p.r2,p.r3].filter(Boolean).forEach(r=>badges.append(el('span',{class:'rb '+(REPARTO[r]||'x')},r)));
+      if(!p.r1)badges.append(el('span',{class:'rb x'},'—'));
+      const t1=el('div',{class:'t1'},el('span',{class:'nm-txt'},p.nome||'Senza nome'),...statusTags(p));
+      const t2=el('div',{class:'t2'});
+      if(p.squadra)t2.append(teamBadge(p.squadra));
+      t2.append(el('span',{},p.squadra||'—'));
+      const isOut=OUT_ST.includes(p.status);
+      panel.append(el('button',{class:'item'+(isOut?' out':''),onclick:()=>playerSheet(p)},
+        badges,fmAvatar(p.img,p.squadra),el('div',{class:'mid'},t1,t2),
+        el('div',{class:'right'},
+          el('div',{class:'r1 num'},fmt(num(p.valore))),
+          el('div',{class:'r2 num'},'stip. '+fmt(num(p.stip))+(isOut?' (escluso)':'')))));
+    });
+    wrap.append(panel);
+  });
+  renderKits();
+}
+function playerSheet(p){
+  const isNew=!S.rosa.includes(p);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuovo giocatore':(p.nome||'Giocatore')));
+    const iNome=tin(p.nome), iSq=tin(p.squadra);
+    const opts=[['','—'],...RUOLI];
+    const sR1=tsel(opts,p.r1), sR2=tsel(opts,p.r2), sR3=tsel(opts,p.r3);
+    const sSt=tsel(STATUS,p.status);
+    const iVal=tin(p.valore,'number','0.1'), iStp=tin(p.stip,'number','0.1');
+    const iRa=tin(p.rata1,'number','0.05'), iRb=tin(p.rata2,'number','0.1');
+    const u=toggle('Under 21',p.u21);
+    const g=toggle('Grigio (fuori dalla Serie A reale)',p.grigio);
+    const auto=el('button',{class:'autolink',onclick:()=>{iStp.value=stipAuto(iVal.value);iRa.value=rata1Auto(iStp.value);iRb.value=rata2Auto(iStp.value);}},'Calcola 10% del valore + rate');
+    /* niente auto-ricalcolo aggressivo: se modifichi lo stipendio, le rate inserite a mano NON vengono toccate; si riempiono da sole solo se vuote */
+    iStp.addEventListener('input',()=>{
+      if(iRa.value==='')iRa.value=rata1Auto(iStp.value);
+      if(iRb.value==='')iRb.value=rata2Auto(iStp.value);
+    });
+    /* foto giocatore */
+    let tmpImg=p.img||'';
+    const av=avatar(tmpImg,72); av.style.cursor='pointer'; av.title='Tocca per caricare la foto';
+    const avWrap=el('div',{style:'display:flex;align-items:center;gap:12px;margin-bottom:12px'});
+    const avBtns=el('div',{},
+      el('button',{class:'autolink',onclick:()=>pickImage(240,url=>{tmpImg=url;av.src=url;})},'Carica foto'),
+      el('div',{},el('button',{class:'autolink',style:'color:var(--neg)',onclick:()=>{tmpImg='';av.src=SILH;}},'Rimuovi')));
+    av.addEventListener('click',()=>pickImage(240,url=>{tmpImg=url;av.src=url;}));
+    avWrap.append(av,avBtns);
+    body.append(
+      avWrap,
+      fld('Nome',iNome),
+      el('div',{class:'frow'},fld('Squadra reale',iSq),fld('Status',sSt)),
+      el('div',{class:'frow'},fld('Ruolo 1',sR1),fld('Ruolo 2',sR2),fld('Ruolo 3',sR3)),
+      el('div',{class:'frow'},el('div',{class:'f',style:'flex:1'},u.node),el('div',{class:'f',style:'flex:1'},g.node)),
+      el('div',{class:'frow',style:'margin-top:12px'},fld('Valore',iVal),fld('Stipendio',iStp,auto)),
+      el('div',{class:'frow'},
+        fld('1ª rata (31/12)',iRa,el('p',{class:'mini'},'metà per eccesso · passo 0,05')),
+        fld('2ª rata (fine)',iRb,el('p',{class:'mini'},'metà per difetto · passo 0,1'))),
+      el('p',{class:'mini'},'Con status "Comproprietà (fuori)" o "Prestito (fuori)" stipendio e rate restano visibili ma non entrano nei totali né nelle proiezioni.')
+    );
+    body.append(actions(()=>{
+      Object.assign(p,{nome:iNome.value,squadra:iSq.value,r1:sR1.value,r2:sR2.value,r3:sR3.value,status:sSt.value,u21:u.cb.checked,grigio:g.cb.checked,img:tmpImg,valore:iVal.value,stip:iStp.value,rata1:iRa.value,rata2:iRb.value});
+      if(isNew)S.rosa.push(p);
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{if(confirm('Eliminare '+(p.nome||'giocatore')+' dalla rosa?')){S.rosa=S.rosa.filter(x=>x.id!==p.id);save();closeSheet();renderAll();}}));
+  });
+}
+/* divise correnti */
+const JERSEY_SVG=`<svg viewBox="0 0 60 56" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#3A4A5E" stroke-width="2.2" stroke-linejoin="round"><path d="M20 4 8 12l5 12 6-3v29h22V21l6 3 5-12L40 4c-2 4-6 6-10 6s-8-2-10-6z"/></svg>`;
+function kitSlot(arr,idx,label){
+  const card=el('button',{class:'kitcard'});
+  const box=el('div',{class:'kitbox'});
+  const cap=el('div',{class:'kitcap'});
+  const refresh=()=>{
+    box.innerHTML=''; cap.innerHTML='';
+    cap.append(label);
+    if(arr[idx])box.append(el('img',{src:arr[idx],alt:label}));
+    else{box.innerHTML=JERSEY_SVG;cap.append(el('span',{class:'add'},'+ Aggiungi'));}
+  };
+  card.addEventListener('click',()=>{
+    if(!arr[idx]){pickImage(600,url=>{arr[idx]=url;save();refresh();});return;}
+    openSheet(body=>{
+      body.append(el('h3',{},label));
+      body.append(el('div',{style:'display:grid;place-items:center;margin-bottom:14px'},
+        el('img',{src:arr[idx],alt:label,style:'max-width:220px;max-height:240px;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))'})));
+      body.append(el('div',{class:'sheet-actions'},
+        el('button',{class:'btn dng',onclick:()=>{arr[idx]='';save();closeSheet();renderAll();}},'Rimuovi'),
+        el('button',{class:'btn pri',onclick:()=>pickImage(600,url=>{arr[idx]=url;save();closeSheet();renderAll();})},'Sostituisci')));
+    });
+  });
+  card.append(box,cap);
+  refresh();
+  return card;
+}
+function renderKits(){
+  $('#kitsTitle').textContent='Divise '+(S.season||'');
+  const g=$('#kitsGrid'); g.innerHTML='';
+  ['1ª divisa','2ª divisa','3ª divisa'].forEach((l,i)=>g.append(kitSlot(S.kits,i,l)));
+}
+
+/* ---------- BILANCIO ---------- */
+function renderBilancio(){
+  const c=calc();
+  const st=$('#bilStrip'); st.innerHTML='';
+  st.append(
+    kpi('Saldo attuale',fmt(r2v(c.saldo),2),c.saldo<0?'ko':'ok'),
+    kpi('− 1ª rata stipendi',fmt(r2v(c.sumR1),2)),
+    kpi('Proiez. 31/12',fmt(r2v(c.mid),2),c.mid<0?'ko':''),
+    kpi('− 2ª rata stipendi',fmt(r2v(c.sumR2),2)),
+    kpi('Proiez. fine',fmt(r2v(c.end),2),c.end<0?'ko':''),
+    kpi('Plus/Minus',(c.pmTot>0?'+':'')+fmt(r1v(c.pmTot)),c.pmTot>=0?'ok':'ko')
+  );
+  if(c.saldo<0||c.mid<0||c.end<0)st.append(kpi('⚠ Art. 53','Saldo neg. vietato','ko'));
+
+  /* dettaglio stipendi per riconciliare i totali riga per riga */
+  $('#stipDetTot').textContent='tot '+fmt(r2v(c.sumR1),2)+' + '+fmt(r2v(c.sumR2),2);
+  const db=$('#stipDetBody'); db.innerHTML='';
+  const mkRow=(a,b,cc,d,cls,extra)=>el('div',{class:'srow'+(cls?' '+cls:'')},
+    el('span',{class:'sr-n'},a,...(extra||[])),
+    el('span',{class:'sr-v num'},b),el('span',{class:'sr-v num'},cc),el('span',{class:'sr-v num'},d));
+  db.append(mkRow('Giocatore','Stip.','1ª rata','2ª rata','srhead'));
+  const paga=S.rosa.filter(p=>!OUT_ST.includes(p.status)).sort((x,y)=>num(y.stip)-num(x.stip));
+  paga.forEach(p=>db.append(mkRow(p.nome||'—',fmt(num(p.stip)),fmt(num(p.rata1),2),fmt(num(p.rata2)),'',statusTags(p))));
+  db.append(mkRow('Totale ('+paga.length+')',fmt(r2v(c.sumStip),2),fmt(r2v(c.sumR1),2),fmt(r2v(c.sumR2),2),'srtot'));
+  db.append(el('p',{class:'hint'},'Il totale è la somma esatta, senza arrotondamenti, delle righe qui sopra. Se differisce dal tuo Excel, confronta riga per riga: spesso è la SOMMA dell\u2019Excel a non includere le righe aggiunte più di recente.'));
+  const fuori=S.rosa.filter(p=>OUT_ST.includes(p.status));
+  if(fuori.length){
+    fuori.forEach(p=>db.append(mkRow(p.nome||'—',fmt(num(p.stip)),fmt(num(p.rata1),2),fmt(num(p.rata2)),'srout',statusTags(p))));
+    db.append(el('p',{class:'hint'},'Le righe in grigio (comproprietà/prestito fuori) non entrano nei totali né nelle proiezioni.'));
+  }
+
+  const list=$('#opsList'); list.innerHTML='';
+  const ops=[...S.ops].sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  if(!ops.length)list.append(el('div',{class:'empty'},'Nessun movimento. Tocca + per registrare la prima operazione.'));
+  ops.forEach(o=>{
+    const net=num(o.dare)-num(o.avere);
+    const cls=net>0?'p':(net<0?'m':'z');
+    const right=el('div',{class:'right'},el('div',{class:'amt num '+cls},(net>0?'+':'')+fmt(r1v(net))));
+    if(num(o.pm)!==0)right.append(el('span',{class:'chip '+(num(o.pm)>0?'pos':'neg')},(num(o.pm)>0?'plus +':'minus ')+fmt(num(o.pm))));
+    list.append(el('button',{class:'item',onclick:()=>opSheet(o,S.ops)},
+      el('div',{class:'ico '+cls},net>0?'↑':(net<0?'↓':'·')),
+      el('div',{class:'mid'},el('div',{class:'t1'},el('span',{class:'nm-txt'},o.op||'Operazione')),el('div',{class:'t2'},fmtDate(o.data))),
+      right));
+  });
+
+  const cl=$('#clauList'); cl.innerHTML='';
+  if(!S.clausole.length)cl.append(el('div',{class:'empty'},'Nessuna clausola registrata.'));
+  S.clausole.forEach(x=>{
+    const v=num(x.imp);
+    cl.append(el('button',{class:'item',onclick:()=>clauSheet(x)},
+      el('div',{class:'ico '+(v>=0?'p':'m')},v>=0?'+':'−'),
+      el('div',{class:'mid'},el('div',{class:'t1'},el('span',{class:'nm-txt'},x.desc||'Clausola')),
+        el('div',{class:'t2'},(x.scad==='meta'?'Metà stagione':x.scad==='fine'?'Fine stagione':'Altro')+(x.incl?' · in proiezione':''))),
+      el('div',{class:'right'},el('div',{class:'amt num '+(v>=0?'p':'m')},(v>0?'+':'')+fmt(v)))));
+  });
+  pmCalcUpdate();
+}
+function opSheet(o,arr){
+  const isNew=!arr.includes(o);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuova operazione':'Operazione'));
+    const iData=tin(o.data,'date'), iOp=tin(o.op);
+    let tipo=num(o.avere)>0?'u':'e';
+    const iImp=tin(num(o.avere)>0?o.avere:o.dare,'number','0.1'), iPm=tin(o.pm,'number','0.1');
+    const seg=el('div',{class:'seg'});
+    const bE=el('button',{onclick:()=>{tipo='e';bE.classList.add('on');bU.classList.remove('on');}},'↑ Entrata');
+    const bU=el('button',{onclick:()=>{tipo='u';bU.classList.add('on');bE.classList.remove('on');}},'↓ Uscita');
+    (tipo==='e'?bE:bU).classList.add('on'); seg.append(bE,bU);
+    body.append(
+      fld('Descrizione',iOp),
+      el('div',{class:'frow'},fld('Data',iData),fld('Importo (mln)',iImp)),
+      fld('Tipo',seg),
+      fld('Plus/Minus realizzata (opzionale)',iPm,el('p',{class:'mini'},'usa il calcolatore in fondo alla pagina Bilancio'))
+    );
+    body.append(actions(()=>{
+      o.data=iData.value;o.op=iOp.value;o.pm=iPm.value;
+      if(tipo==='e'){o.dare=iImp.value;o.avere='';}else{o.avere=iImp.value;o.dare='';}
+      if(isNew)arr.push(o);
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{if(confirm('Eliminare questa operazione?')){const i=arr.indexOf(o);if(i>-1)arr.splice(i,1);save();closeSheet();renderAll();}}));
+  });
+}
+function clauSheet(x){
+  const isNew=!S.clausole.includes(x);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuova clausola':'Clausola'));
+    const iD=tin(x.desc), iI=tin(x.imp,'number','0.1');
+    const sS=tsel([['meta','Metà stagione'],['fine','Fine stagione'],['altro','Altro']],x.scad||'fine');
+    const t=toggle('Includi nelle proiezioni di saldo',x.incl);
+    body.append(fld('Descrizione',iD),
+      el('div',{class:'frow'},fld('Importo ± (mln)',iI),fld('Scadenza',sS)), t.node);
+    body.append(actions(()=>{
+      Object.assign(x,{desc:iD.value,imp:iI.value,scad:sS.value,incl:t.cb.checked});
+      if(isNew)S.clausole.push(x);
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{S.clausole=S.clausole.filter(y=>y.id!==x.id);save();closeSheet();renderAll();}));
+  });
+}
+function pmCalcUpdate(){
+  const out=$('#pmRisultato'),det=$('#pmDetail'); if(!out)return;
+  const aRaw=$('#pmAcq').value,vRaw=$('#pmVen').value;
+  const anni=Math.max(1,Math.round(num($('#pmAnni').value)||1));
+  if(!aRaw&&!vRaw){out.textContent='—';out.style.color='';det.textContent='';return;}
+  const residuo=num(aRaw)/anni;
+  const d=r2v(num(vRaw)-residuo);
+  out.textContent=(d>0?'+':'')+fmt(d)+(d>0?' plus':(d<0?' minus':' pari'));
+  out.style.color=d>0?'var(--pos)':(d<0?'var(--neg)':'var(--mut)');
+  det.textContent='costo residuo '+fmt(r2v(residuo),2)+' ('+fmt(num(aRaw))+' ÷ '+anni+(anni>1?' stagioni)':' stagione)')+(anni>1?' · secco: '+fmt(r2v(num(vRaw)-num(aRaw)),2):'');
+}
+
+/* ---------- MERCATO ---------- */
+function renderMercato(){
+  const c=calc(),k=mktCalc(c);
+  const st=$('#mktStrip'); st.innerHTML='';
+  st.append(
+    kpi('Budget',fmt(r2v(c.saldo),2),'au'),
+    kpi('Offerte in lista',fmt(r1v(k.totVM))),
+    kpi('Dopo acquisti',fmt(r2v(k.after),2),k.after<0?'ko':'ok'),
+    kpi('Proiez. 31/12',fmt(r2v(k.mid),2),k.mid<0?'ko':''),
+    kpi('Proiez. fine',fmt(r2v(k.end),2),k.end<0?'ko':''),
+    kpi('Posti liberi',`${Math.max(22-c.nMov,0)}M · ${Math.max(3-c.nPT,0)}P · ${Math.max(3-c.nPrim,0)}U`)
+  );
+  const bn=$('#mktBanner'); const msgs=[];
+  if(k.after<0)msgs.push(`Sforamento di ${fmt(r1v(-k.after))}: ammenda 50% (${fmt(r1v(-k.after*0.5))}) + annullamento offerte (art. 29.5).`);
+  const nObiettivi=S.mercato.filter(m=>!m.prim&&(m.nome||num(m.vm))).length;
+  const posti=Math.max(22-c.nMov,0)+Math.max(3-c.nPT,0);
+  if(nObiettivi>posti)msgs.push(`In lista ${nObiettivi} giocatori ma solo ${posti} posti vacanti (art. 26.3).`);
+  bn.className='banner'+(msgs.length?' on':''); bn.textContent=msgs.join(' ');
+
+  $('#mktCount').textContent=S.mercato.length?String(S.mercato.length)+' obiettivi':'';
+  const list=$('#mktList'); list.innerHTML='';
+  if(!S.mercato.length)list.append(el('div',{class:'empty'},'Lista vuota. Tocca + per aggiungere un obiettivo di mercato.'));
+  S.mercato.forEach((m,i)=>{
+    const badges=el('div',{class:'rbs'});
+    String(m.ruoli||'').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean).slice(0,3).forEach(R=>{
+      badges.append(el('span',{class:'rb '+(REPARTO[R]||'x')},R));});
+    if(!badges.children.length)badges.append(el('span',{class:'rb x'},String(i+1)));
+    const t1=el('div',{class:'t1'},el('span',{class:'nm-txt'},m.nome||'Obiettivo '+(i+1)));
+    if(m.prim)t1.append(el('span',{class:'st u21'},'PRIM'));
+    const t2=el('div',{class:'t2'});
+    if(m.squadra)t2.append(teamBadge(m.squadra),el('span',{},m.squadra),el('span',{},'·'));
+    t2.append(el('span',{},'stip. '+fmt(num(m.stip))+' · rate '+fmt(num(m.rata1),2)+' + '+fmt(num(m.rata2))));
+    list.append(el('button',{class:'item',onclick:()=>mktSheet(m)},badges,el('div',{class:'mid'},t1,t2),
+      el('div',{class:'right'},el('div',{class:'r1 num'},fmt(num(m.vm))),el('div',{class:'r2'},'offerta'))));
+  });
+}
+function mktSheet(m){
+  const isNew=!S.mercato.includes(m);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuovo obiettivo':(m.nome||'Obiettivo')));
+    const iN=tin(m.nome),iSq=tin(m.squadra),iR=tin(m.ruoli,'text',null,{placeholder:'es. AD AS'});
+    const iV=tin(m.vm,'number','0.1'),iS=tin(m.stip,'number','0.1');
+    const iA=tin(m.rata1,'number','0.05'),iB=tin(m.rata2,'number','0.1');
+    const t=toggle('Destinato alla Primavera (U21)',m.prim);
+    iV.addEventListener('input',()=>{iS.value=stipAuto(iV.value);iA.value=rata1Auto(iS.value);iB.value=rata2Auto(iS.value);});
+    iS.addEventListener('input',()=>{iA.value=rata1Auto(iS.value);iB.value=rata2Auto(iS.value);});
+    body.append(
+      el('div',{class:'frow'},fld('Giocatore',iN),fld('Squadra reale',iSq)),
+      el('div',{class:'frow'},fld('Ruoli',iR),fld('VM / offerta',iV)),
+      el('div',{class:'frow'},fld('Stipendio (auto 10%)',iS),fld('1ª rata',iA),fld('2ª rata',iB)),
+      t.node);
+    body.append(actions(()=>{
+      Object.assign(m,{nome:iN.value,squadra:iSq.value,ruoli:iR.value,vm:iV.value,stip:iS.value,rata1:iA.value,rata2:iB.value,prim:t.cb.checked});
+      if(isNew)S.mercato.push(m);
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{S.mercato=S.mercato.filter(x=>x.id!==m.id);save();closeSheet();renderAll();}));
+  });
+}
+
+/* ---------- STATS ---------- */
+let hideGone=false,quickMode=false,statFilter='all',statSort={key:'p',dir:-1},statsSub='gioc';
+function roleOf(s){
+  if(s.ruolo)return s.ruolo;
+  const nm=(s.nome||'').toLowerCase();
+  const p=S.rosa.find(p=>(p.nome||'').toLowerCase()===nm);
+  return p?p.r1:'';
+}
+function statVal(s,key){
+  if(key==='p')return num(s.p); if(key==='g')return num(s.g); if(key==='a')return num(s.a);
+  if(key==='ga')return num(s.g)+num(s.a);
+  return 0;
+}
+function renderStats(){
+  /* chips filtri + azioni */
+  const ch=$('#statChips'); ch.innerHTML='';
+  [['all','Tutti'],['P','P'],['D','D'],['C','C'],['A','A']].forEach(([v,l])=>{
+    ch.append(el('button',{class:'fchip'+(statFilter===v?' on':''),onclick:()=>{statFilter=v;renderStats();}},l));
+  });
+  ch.append(el('button',{class:'fchip'+(hideGone?' on':''),onclick:()=>{hideGone=!hideGone;renderStats();}},hideGone?'Ex nascosti':'Nascondi ex'));
+  ch.append(el('button',{class:'fchip gold'+(quickMode?' on':''),title:'Modalità inserimento rapido',onclick:()=>{quickMode=!quickMode;renderStats();}},'⚡ Rapido'));
+  ch.append(el('button',{class:'fchip',onclick:syncStats},'Sync rosa'));
+  $('#quickHint').style.display=quickMode?'block':'none';
+
+  /* header ordinabile */
+  const head=$('#lbHead'); head.innerHTML='';
+  head.append(el('span',{class:'lb-rank'},''),el('span',{style:'width:36px;flex:none'},''));
+  const sortBtn=(key,lbl,cls)=>el('button',{class:cls+(statSort.key===key?' sorton':''),onclick:()=>{
+    if(statSort.key===key)statSort.dir*=-1; else statSort={key,dir:key==='nome'?1:-1};
+    renderStats();
+  }},lbl+(statSort.key===key?(statSort.dir<0?' ↓':' ↑'):''));
+  head.append(sortBtn('nome','Giocatore','nm'));
+  head.append(el('span',{class:'lb-rcol'},'R'));
+  head.append(sortBtn('p','P','lb-col'),sortBtn('g','G','lb-col'),sortBtn('a','A','lb-col'),sortBtn('ga','G+A','lb-col'));
+
+  const list=$('#statsList'); list.innerHTML='';
+  let rows=[...S.stats];
+  if(hideGone)rows=rows.filter(s=>!s.gone);
+  if(statFilter!=='all')rows=rows.filter(s=>REPARTO[roleOf(s)]===statFilter);
+  rows.sort((a,b)=>{
+    if(statSort.key==='nome')return statSort.dir*String(a.nome||'').localeCompare(String(b.nome||''),'it');
+    const d=statVal(a,statSort.key)-statVal(b,statSort.key);
+    return statSort.dir*(d!==0?d:(statVal(a,'ga')-statVal(b,'ga')));
+  });
+  const qCell=(s,field,val,hl)=>{
+    const c=el('span',{class:'lb-val num'+(hl?' hl':'')+(quickMode&&field?' qc':'')},String(val));
+    if(quickMode&&field){
+      c.title='clic +1 · clic destro / Shift+clic −1';
+      c.addEventListener('click',e=>{e.stopPropagation();
+        s[field]=Math.max(0,num(s[field])+(e.shiftKey?-1:1));save();renderStats();});
+      c.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();
+        s[field]=Math.max(0,num(s[field])-1);save();renderStats();});
+    }
+    return c;
+  };
+  rows.forEach((s,i)=>{
+    const r=roleOf(s);
+    const ph=photoOf(s.nome);
+    const row=el('button',{class:'lb-row',onclick:()=>{if(!quickMode)statSheet(s);}},
+      el('span',{class:'lb-rank num'},String(i+1)),
+      fmAvatar(ph.img,ph.squadra,28),
+      el('span',{class:'nm',style:'margin-left:8px'},el('span',{class:s.gone?'gone':''},s.nome||'—')),
+      el('span',{class:'lb-rcol'},r?el('span',{class:'rb '+(REPARTO[r]||'x'),style:'min-width:30px'},r):el('span',{class:'rb x',style:'min-width:30px'},'—')),
+      qCell(s,'p',num(s.p)),qCell(s,'g',num(s.g)),qCell(s,'a',num(s.a)),qCell(s,null,num(s.g)+num(s.a),true));
+    list.append(row);
+  });
+  if(!rows.length)list.append(el('div',{class:'empty'},'Nessun giocatore con questi filtri.'));
+}
+function syncStats(){
+  let n=0;
+  S.rosa.forEach(p=>{
+    if(!p.nome)return;
+    const s=S.stats.find(s=>(s.nome||'').toLowerCase()===p.nome.toLowerCase());
+    if(!s){S.stats.push({id:uid(),nome:p.nome,p:0,g:0,a:0,gone:false,ruolo:p.r1});n++;}
+    else if(!s.ruolo)s.ruolo=p.r1;
+  });
+  save();renderStats();
+  alert(n+' giocatori aggiunti dalla rosa alle statistiche.');
+}
+function statSheet(s){
+  const isNew=!S.stats.includes(s);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuovo giocatore':(s.nome||'Statistiche')));
+    const iN=tin(s.nome),iP=tin(s.p,'number','1'),iG=tin(s.g,'number','1'),iA=tin(s.a,'number','1');
+    const sR=tsel([['','— (da rosa)'],...RUOLI],s.ruolo||'');
+    const t=toggle('Non più in rosa',s.gone);
+    body.append(
+      el('div',{class:'frow'},fld('Giocatore',iN),fld('Ruolo',sR)),
+      el('div',{class:'frow'},fld('Presenze',iP),fld('Gol',iG),fld('Assist',iA)), t.node);
+    body.append(actions(()=>{
+      Object.assign(s,{nome:iN.value,ruolo:sR.value,p:iP.value,g:iG.value,a:iA.value,gone:t.cb.checked});
+      if(isNew)S.stats.push(s);
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{if(confirm('Eliminare la riga di '+(s.nome||'questo giocatore')+'?')){S.stats=S.stats.filter(x=>x.id!==s.id);save();closeSheet();renderAll();}}));
+  });
+}
+
+/* ---------- PALMARES ---------- */
+const COMP_OPTS=[['campionato','Campionato'],['focup','FO Cup'],['coppalega','Coppa di Lega'],['supercoppa','Supercoppa'],['altro','Altro']];
+const COMP_LBL=Object.fromEntries(COMP_OPTS);
+const ESITI=[['','—'],['campione','Campione 🏆'],['vincitore','Vincitore 🏆'],['promosso','Promosso'],['ripescato','Ripescato'],['retrocesso','Retrocesso'],['finalista','Finalista']];
+const ESITO_LBL={campione:'Campione',vincitore:'Vincitore',promosso:'Promosso',ripescato:'Ripescato',retrocesso:'Retrocesso',finalista:'Finalista'};
+function esitoChip(e){
+  if(!e)return null;
+  const cls=e==='campione'||e==='vincitore'?'gold':(e==='promosso'?'pos':(e==='retrocesso'?'neg':(e==='ripescato'?'acc':'')));
+  return el('span',{class:'chip '+cls},(e==='campione'||e==='vincitore'?'🏆 ':'')+ESITO_LBL[e]);
+}
+function renderPalmares(){
+  const list=$('#palmList'); list.innerHTML='';
+  const rows=[...S.palmares].sort((a,b)=>String(b.stagione||'').localeCompare(String(a.stagione||'')));
+  if(!rows.length)list.append(el('div',{class:'empty'},'Nessun piazzamento. Tocca + per aggiungere il primo.'));
+  rows.forEach(x=>{
+    const t1=el('div',{class:'t1'},el('span',{class:'nm-txt'},COMP_LBL[x.comp]||'Competizione'),...(x.dett?[el('span',{class:'chip'},x.dett)]:[]));
+    const right=el('div',{class:'right'},el('div',{class:'r1 num'},x.piazz||'—'));
+    const ec=esitoChip(x.esito); if(ec)right.append(ec);
+    list.append(el('button',{class:'item',onclick:()=>palmSheet(x)},
+      el('div',{class:'ico '+(x.esito==='campione'||x.esito==='vincitore'?'g':(x.esito==='retrocesso'?'m':'z'))},x.esito==='campione'||x.esito==='vincitore'?'★':'▪'),
+      el('div',{class:'mid'},t1,el('div',{class:'t2'},x.stagione||'—')),
+      right));
+  });
+  const g=$('#trofGrid'); g.innerHTML='';
+  if(!S.trofei.length)g.append(el('div',{class:'empty',style:'grid-column:1/-1'},'La bacheca è vuota… per ora. 🏆'));
+  S.trofei.forEach(t=>{
+    const card=el('button',{class:'trof',onclick:()=>trofSheet(t)});
+    if(t.img)card.append(el('img',{class:'timg',src:t.img,alt:t.titolo||'Trofeo'}));
+    else card.append(el('div',{class:'timg',style:'display:grid;place-items:center;color:var(--dim);font-size:2rem'},'🏆'));
+    card.append(el('div',{class:'tt'},el('div',{class:'a'},t.titolo||'Trofeo'),el('div',{class:'b'},[t.anno,t.desc].filter(Boolean).join(' · '))));
+    g.append(card);
+  });
+}
+function palmSheet(x){
+  const isNew=!S.palmares.includes(x);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuovo piazzamento':'Piazzamento'));
+    const iSt=tin(x.stagione,'text',null,{placeholder:'es. 2025/26'});
+    const sC=tsel(COMP_OPTS,x.comp||'campionato');
+    const iD=tin(x.dett,'text',null,{placeholder:'es. Serie D/B'});
+    const iP=tin(x.piazz,'text',null,{placeholder:'es. 10°'});
+    const sE=tsel(ESITI,x.esito||'');
+    body.append(
+      el('div',{class:'frow'},fld('Stagione',iSt),fld('Competizione',sC)),
+      el('div',{class:'frow'},fld('Dettaglio (serie/fase)',iD),fld('Piazzamento',iP)),
+      fld('Esito',sE,el('p',{class:'mini'},'Per il campionato: Campione, Promosso, Ripescato o Retrocesso.')));
+    body.append(actions(()=>{
+      Object.assign(x,{stagione:iSt.value,comp:sC.value,dett:iD.value,piazz:iP.value,esito:sE.value});
+      if(isNew)S.palmares.push(x);
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{S.palmares=S.palmares.filter(y=>y.id!==x.id);save();closeSheet();renderAll();}));
+  });
+}
+function trofSheet(t){
+  const isNew=!S.trofei.includes(t);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuovo trofeo':'Trofeo'));
+    const iT=tin(t.titolo,'text',null,{placeholder:'es. Scudetto FO'}),iA=tin(t.anno,'text',null,{placeholder:'es. 2026/27'});
+    const iD=el('textarea',{rows:'2',placeholder:'descrizione…'});iD.value=t.desc||'';
+    const prev=el('div',{class:'kitbox',style:'aspect-ratio:1/1;max-width:180px'});
+    const refresh=()=>{prev.innerHTML='';
+      if(t._img||t.img)prev.append(el('img',{src:t._img||t.img,alt:''}));
+      else prev.append(el('span',{},'+ Foto trofeo'));
+    };
+    prev.addEventListener('click',()=>pickImage(700,url=>{t._img=url;refresh();}));
+    refresh();
+    body.append(el('div',{class:'frow'},fld('Titolo',iT),fld('Stagione / anno',iA)),fld('Descrizione',iD),fld('Immagine',prev));
+    body.append(actions(()=>{
+      Object.assign(t,{titolo:iT.value,anno:iA.value,desc:iD.value,img:t._img||t.img||''});delete t._img;
+      if(isNew)S.trofei.push(t);
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{if(confirm('Eliminare questo trofeo dalla bacheca?')){S.trofei=S.trofei.filter(y=>y.id!==t.id);save();closeSheet();renderAll();}}));
+  });
+}
+
+/* ---------- ALTRO: storico ---------- */
+function renderStorico(){
+  const wrap=$('#seasonsList'); wrap.innerHTML='';
+  if(!S.seasons.length)wrap.append(el('div',{class:'empty'},'Nessuna stagione archiviata.'));
+  S.seasons.forEach(se=>{
+    const sc=seasonCalc(se);
+    const head=el('div',{class:'seas-h'},
+      el('div',{class:'yr'},se.name||'—'),
+      el('span',{class:'chip'},se.ops.length+' mov.'),
+      el('span',{class:'chip '+(sc.pm>=0?'pos':'neg')},'P/M '+(sc.pm>0?'+':'')+fmt(r1v(sc.pm))),
+      el('div',{class:'sp'}),
+      el('div',{style:'text-align:right'},
+        el('div',{class:'amt num '+(sc.saldo>=0?'p':'m')},fmt(r2v(sc.saldo),2)),
+        el('div',{style:'font-size:.64rem;color:var(--mut)'},'saldo finale')),
+      el('button',{class:'autolink',style:'margin-left:6px',onclick:()=>seasonSheet(se)},'✎')
+    );
+    const det=el('details',{class:'art'});
+    det.append(el('summary',{},'Registro operazioni',el('span',{class:'artag'},'iniziale '+fmt(num(se.saldoIniziale)))));
+    const bd=el('div',{class:'body',style:'padding:0'});
+    [...se.ops].sort((a,b)=>(b.data||'').localeCompare(a.data||'')).forEach(o=>{
+      const net=num(o.dare)-num(o.avere);const cls=net>0?'p':(net<0?'m':'z');
+      const right=el('div',{class:'right'},el('div',{class:'amt num '+cls},(net>0?'+':'')+fmt(r1v(net))));
+      if(num(o.pm)!==0)right.append(el('span',{class:'chip '+(num(o.pm)>0?'pos':'neg')},(num(o.pm)>0?'+':'')+fmt(num(o.pm))));
+      bd.append(el('button',{class:'item',onclick:()=>opSheet(o,se.ops)},
+        el('div',{class:'ico '+cls},net>0?'↑':(net<0?'↓':'·')),
+        el('div',{class:'mid'},el('div',{class:'t1'},el('span',{class:'nm-txt'},o.op||'—')),el('div',{class:'t2'},fmtDate(o.data))),right));
+    });
+    bd.append(el('div',{style:'padding:10px 14px'},el('button',{class:'btn',onclick:()=>opSheet({id:uid(),data:'',op:'',dare:'',avere:'',pm:''},se.ops)},'+ Operazione')));
+    if(se.note)bd.append(el('p',{class:'hint'},se.note));
+    /* divise della stagione */
+    const kg=el('div',{class:'kit-grid'});
+    ['1ª divisa','2ª divisa','3ª divisa'].forEach((l,i)=>kg.append(kitSlot(se.kits,i,l)));
+    bd.append(el('div',{class:'sect',style:'border-top:1px solid var(--line)'},'Divise '+(se.name||'')),kg);
+    det.append(bd);
+    wrap.append(el('div',{},head,det));
+  });
+}
+function seasonSheet(se){
+  const isNew=!S.seasons.includes(se);
+  openSheet(body=>{
+    body.append(el('h3',{},isNew?'Nuova stagione':'Stagione '+(se.name||'')));
+    const iN=tin(se.name,'text',null,{placeholder:'es. 2024/25'}),iS=tin(se.saldoIniziale,'number','0.1');
+    const iNote=el('textarea',{rows:'3'});iNote.value=se.note||'';
+    body.append(el('div',{class:'frow'},fld('Stagione',iN),fld('Saldo iniziale',iS)),fld('Note / clausole',iNote));
+    body.append(actions(()=>{
+      Object.assign(se,{name:iN.value,saldoIniziale:iS.value,note:iNote.value});
+      if(isNew){if(!se.kits)se.kits=['','',''];S.seasons.unshift(se);}
+      save();closeSheet();renderAll();
+    }, isNew?null:()=>{if(confirm('Eliminare la stagione '+se.name+' e tutte le sue operazioni?')){S.seasons=S.seasons.filter(x=>x.id!==se.id);save();closeSheet();renderAll();}}));
+  });
+}
+
+/* ---------- REGOLAMENTO ---------- */
+const REG=[
+['Rosa: limiti e Primavera','Art. 1–5',`<b>Massimi:</b> 22 di movimento + 3 portieri (verifica a scadenza liste e prima di ogni partita). <b>Minimi:</b> 16 + 2 (verifica prima delle partite ufficiali — violazione = <b>esonero ed esclusione per la stagione</b>).<br><br><b>Fuori rosa:</b> fino a 3 <b>U21</b> in Primavera (giocano solo FO Cup, Coppa di Lega, Supercoppa e amichevoli; interscambiabili in ogni momento con U21 in rosa); <b>grigi</b>; ceduti in prestito/comproprietà.<br><br><b>Sanzioni eccesso:</b> esclusione dalla formazione degli eccedenti (dal più recente acquisto) + ammenda: A 4 · B 3 · C 2 · D 1 mln per calciatore (+n recidiva). <b>U21</b> = non compie 22 anni nell'anno d'inizio stagione.`],
+['Formazioni, ruoli e malus','Art. 6–7',`Consegna in app <b>entro l'inizio della prima gara reale</b> della giornata, poi immodificabile. Omessa/errata consegna → art. 15.<br><br><b>12 ruoli:</b> PT TD TS DC ED ES CC TQ AD AS SP P — max 3 per giocatore, fissi per la stagione (integrazione a fine gennaio per i nuovi).<br><br><b>Fuori ruolo −2</b> solo tra ruoli compatibili. Nessun malus se il fuori-ruolo s.v. viene sostituito da uno di ruolo, o se una sostituzione lo sposta in un ruolo congeniale.`],
+['Moduli ammessi','Art. 8',`5-4-1 · 5-3-2* · 5-3-1-1 · 4-5-1 · 4-4-2* · 4-4-1-1 · 4-3-3** · 4-3-2-1 · 4-3-1-2* · 4-2-3-1 · 3-5-2* · 3-5-1-1 · 3-4-3** · 3-4-2-1 · 3-4-1-2*<br><br>* 2 punte: 2 SP, 2 P o SP+P. ** tridente: AD+P+AS oppure SP+P+SP. <b>Vietato il tridente asimmetrico</b> (AD/AS + SP).`],
+['Riserve e sostituzioni','Art. 9',`Panchina min 7, max 12. Fino a <b>5 sostituzioni</b> dei titolari s.v. Ordine: non s.v. → meno malus fuori-ruolo → preferenza panchina. La sostituzione può cambiare modulo o posizioni automaticamente.`],
+['Punteggi','Art. 10',`+3 gol e rigore parato · +1 assist · −0,5 ammonizione · −1 gol subito (PT) ed espulsione · −2 autogol · −3 rigore sbagliato. Niente modificatore difesa né capitano. <b>Fattore campo</b> in casa da stadio (art. 44).<br><br><b>Doppioni</b> nella stessa giornata su più competizioni: −0,5 dal 2° doppione, scontato nella competizione meno importante (Supercoppa &gt; FO Cup &gt; Coppa di Lega &gt; amichevoli).`],
+['Voti d\u2019ufficio (rinvii)','Art. 12',`Partita reale senza voti: a) <b>fanta-media</b> per difetto se ≥10 giornate disputate e voto in ≥50%; b) <b>s.v.</b> se voto in &lt;30%; c) altrimenti <b>voto politico</b>: 5 PT, 6 movimento. Niente voto d'ufficio se il recupero è entro 48h / 4 giorni dalla prima gara / prima della giornata successiva.`],
+['Risultato e premi','Art. 13–14',`<b>Gol:</b> &lt;66→0 · 66–71,5→1 · 72–77,5→2 · 78–83,5→3 · 84–89,5→4 · 90–95,5→5.<br><b>Supplementari</b> (semisomma per difetto, o somma in finale secca): 66–69→1 · 69–72→2 · 72–75→3 · 75–78→4 · 78–81→5.<br><b>Rigori:</b> lista rigoristi o primi 5 a voto; segnato con voto puro ≥6.<br><br><b>Premi partita:</b> 70–74,5→1 · 75–79,5→2 · 80–84,5→3 · 85–89,5→4 · 90–94,5→5 mln; in casa e competizione ufficiale × <b>fattore premi</b> dello stadio di proprietà.`],
+['Sanzioni formazione','Art. 15–16',`<b>Omessa consegna:</b> ultima formazione schierata con −5 fantapunti (−10 nelle Coppe contemporanee); niente premi partita; <b>−1 punto ogni 2 mancate consegne</b>; espropriazione a 3 punti di penalizzazione o 3 consecutive.<br><br><b>Sostituzioni incomplete / inferiorità:</b> ammenda per ogni mancante: A 4 · B 3 · C 2 · D 1 mln (dimezzata se manca il PT; non si applica con mercato settimanale chiuso).`],
+['Competizioni','Art. 17–23',`<b>Campionato:</b> girone unico da 12, tre scontri (andata, neutro, ritorno) = 33 giornate. Classifica: punti → fantapunti → gol fatti → scontri diretti → più gol subiti.<br><br><b>FO Cup</b> aperta a tutti. <b>Coppa di Lega:</b> prime 8 della Serie A, iscrizione 6 mln, obbligatoria; gironi A (1ª-4ª-5ª-8ª) e B (2ª-3ª-6ª-7ª), semifinali A/R, finale secca; premi 5/2 · 10 · 15 mln. <b>Supercoppa:</b> Scudetto vs FO Cup (o finalista), gara secca in neutro.<br><br><b>Ripescaggi:</b> 50% piazzamento + 25% tradizione (10/7/4/1 per campionato A/B/C/D; 4 Scudetto, 2 FO Cup, 2 Supercoppa, 1 C. Lega) + 25% fantapunti; escluso chi è stato ripescato nelle ultime 5 stagioni per la stessa categoria.`],
+['Mercato: liste e buste','Art. 24–30',`Tesserabili solo militanti in Serie A reale (incluse seconde squadre). Trattative <b>solo nella stessa categoria</b>.<br><br><b>Liste:</b> sistema "al buio"; l'offerta vale il <b>valore FO</b>; max giocatori = posti vacanti (+U21 Primavera); totale ≤ budget alla scadenza. Giocatore conteso → <b>buste</b>: vince la più alta ≥ valore FO, max 1 decimale; parità → spareggio con offerta ≥ precedente; nessuna valida → resta svincolato.<br><br><b>Sforamento:</b> ammenda 50% dello sforamento + annullamento offerte vincenti dalla più bassa (art. 29.5).<br><br><b>Mercato settimanale:</b> stesse regole ove compatibili; vietati giocatori svincolati (da chiunque) negli ultimi 7 giorni.`],
+['Trattative tra Società','Art. 31–37',`Modalità: definitivo, compartecipazione (scade a fine stagione) o prestito (scade 1/1 o fine stagione; riscatti/controriscatti; niente rinnovo né interruzione anticipata). Stesso giocatore tra le stesse due Società: <b>non ritrattabile per 100 giorni</b>.<br><br><b>Contropartite:</b> solo scambio → tutti al valore FO attuale; soldi+contropartite → denaro + valore FO; in compartecipazione → 50% del valore FO; in prestito → 10% (semestrale) / 20% (annuale) del valore FO; solo soldi → vale il pattuito (se &lt; valore FO, stipendio calcolato sul valore FO).<br><br><b>Comproprietà libera:</b> 50% del cartellino; risoluzione a fine stagione con accordo (solo denaro, unica soluzione) o buste; buste pari (anche 0) → riscatta chi lo ha in rosa; valore per l'acquirente = doppio del prezzo; vietato ricostituirla la stagione dopo tra le stesse Società.<br><br><b>Prestito:</b> gratuito → valore FO; oneroso annuale → FO + prezzo; semestrale → FO + 2× prezzo.`],
+['Comproprietà obbligata','Art. 38',`Nasce ex lege da promozioni/retrocessioni/ripescaggi. <b>Rimborso immediato per metà cartellino: R = (0,6 × Valore FO + 0,4 × Valore in rosa) / 2</b>.<br><br><b>Due Società:</b> accordo privato (compravendita del 50%) o buste — la più alta prende l'intero cartellino pagando la perdente.<br><b>Tre o più:</b> turno preliminare di buste → escluse dalla 3ª in giù con secondo rimborso (salvo offerta 0); le due rimaste versano cauzione 10% (restituita se si va a buste finali, incamerata dal FO con accordo privato); nelle buste finali offerta minima = quella preliminare; entrambe non valide → svincolato, nessun rimborso.`],
+['Contratti e stipendi','Art. 39–40',`Stipendio = <b>10% del valore in rosa</b>, in 2 rate semestrali: 1ª entro il 31/12 (arrotondata per eccesso), 2ª a fine stagione (per difetto). Rinnovo automatico annuale <b>+10%</b>, salvo che il giocatore sia stato: in prestito out fino a fine stagione, in comproprietà libera, o grigio.`],
+['Risoluzioni e svincoli','Art. 41–43',`<b>Ordinaria:</b> solo nei periodi da Allegato E; serve il 100% del cartellino; penale <b>50% del valore in rosa</b> + retribuzione residua al giocatore.<br><br><b>Straordinaria:</b> max <b>4 in estate / 2 in inverno</b>; incassi il <b>50% del valore FO attuale</b> + paghi la retribuzione residua.<br><br><b>Grigi:</b> rimborso automatico del valore FO quando il giocatore lascia definitivamente la Serie A reale; altrimenti rimborso su richiesta entro chiusura di una finestra FO. Un grigio non è vendibile né prestabile: solo rimborso.`],
+['Stadi','Art. 44–47',`<table><tr><th>Fascia</th><th>Cap.</th><th class="rt">Acquisto</th><th class="rt">Affitto</th><th class="rt">Gestione</th><th class="rt">Campo</th><th class="rt">Premi</th></tr>
+<tr><td>VI</td><td>10k</td><td class="rt">30</td><td class="rt">4,5</td><td class="rt">3</td><td class="rt">+0,5</td><td class="rt">×1,5</td></tr>
+<tr><td>V</td><td>20k</td><td class="rt">60</td><td class="rt">9</td><td class="rt">6</td><td class="rt">+1</td><td class="rt">×2</td></tr>
+<tr><td>IV</td><td>30k</td><td class="rt">90</td><td class="rt">13,5</td><td class="rt">9</td><td class="rt">+1,5</td><td class="rt">×2,5</td></tr>
+<tr><td>III</td><td>40k</td><td class="rt">120</td><td class="rt">18</td><td class="rt">12</td><td class="rt">+2</td><td class="rt">×3</td></tr>
+<tr><td>II</td><td>60k</td><td class="rt">150</td><td class="rt">22,5</td><td class="rt">15</td><td class="rt">+2,5</td><td class="rt">×3,5</td></tr>
+<tr><td>I</td><td>80k</td><td class="rt">180</td><td class="rt">27</td><td class="rt">18</td><td class="rt">+3</td><td class="rt">×4</td></tr></table>
+Costi in mln; affitto e gestione annuali. Fattore premi solo per stadi di proprietà. Rate: 3 annuali con maggiorazione 110% su II+III; acconto ≥ affitto della fascia. <b>Decadimento</b> dopo 3 stagioni (−1 fascia), evitabile con manutenzione straordinaria: ×1,5 (IV stag.), ×2 (V), ×2,5 (VI) della ordinaria.`],
+['Gestione Società','Art. 48–55',`Neo-iscritte: ultima categoria, <b>300 mln, rosa vuota</b>. Post-fallimento: riacquisto di storia e denominazione pagando il saldo negativo +10%/anno. Fondatori storici dopo un anno sabbatico: rientro con storia dal 1° giro di liste; nuova Società di chi ne aveva già una → perdita totale di storia/rosa/patrimonio e 3° giro di liste.<br><br>Scadenze: comunicare entro 24h l'impossibilità di rispettarle. Esclusione con ammende cumulate ≥ 50 mln.<br><br><b>Art. 53: divieto inderogabile di saldo negativo</b>, anche momentaneo. Sanzioni automatiche (art. 54): espropriazione dei grigi dal valore FO maggiore (rimborso 50%), poi dei cartellini interi in rosa fino al pareggio + penalizzazione in classifica: 0,1–1,9→−2 · 2–4,9→−4 · 5–9,9→−7 · 10–19,9→−10 · 20–29,9→−15.<br><br><b>Scadenze stagionali:</b> metà = 1ª rata stipendi, clausole/rate, apertura mercato invernale; fine = clausole/rate, 2ª rata stipendi, riscatti, controriscatti, risoluzione comproprietà, premi classifica.`],
+];
+function renderRegole(){
+  const w=$('#regWrap'); w.innerHTML='';
+  const q=($('#regSearch').value||'').toLowerCase();
+  REG.forEach(([tit,art,body])=>{
+    if(q&&!(tit+art+body).toLowerCase().includes(q))return;
+    const d=el('details',{class:'art'});
+    if(q)d.open=true;
+    d.append(el('summary',{},tit,el('span',{class:'artag'},art)));
+    d.append(el('div',{class:'body',html:body}));
+    w.append(d);
+  });
+  if(!w.children.length)w.append(el('div',{class:'empty'},'Nessun articolo trovato.'));
+}
+
+/* ---------- NAV / RENDER ---------- */
+let page='rosa';
+function renderTop(){
+  const c=calc();
+  $('#topBudget').textContent=fmt(r2v(c.saldo),2);
+  $('#topBudget').style.color=c.saldo<0?'var(--neg)':'var(--pos)';
+  $('#topName').textContent=S.club||'La Mia Società';
+  $('#topSeason').textContent='Stagione '+(S.season||'');
+  const cr=$('#crest'); cr.innerHTML='';
+  cr.classList.toggle('haslogo',!!S.logo);
+  if(S.logo)cr.append(el('img',{src:S.logo,alt:'logo'}));
+  else cr.textContent=((S.club||'FO').trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())||'FO';
+  const wm=$('#wmark');
+  if(wm){if(S.logo){wm.src=S.logo;wm.style.display='block';}else{wm.removeAttribute('src');wm.style.display='none';}}
+}
+function renderAll(){
+  renderTop();
+  renderRosa();renderBilancio();renderMercato();renderStats();renderPalmares();renderStorico();
+  updFab();
+}
+function updFab(){
+  const show=!(page==='altro');
+  $('#fab').style.display=show?'grid':'none';
+}
+document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>{
+  page=b.dataset.p;
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='pg-'+page));
+  updFab();
+  window.scrollTo({top:0});
+}));
+document.querySelectorAll('#statsSeg button').forEach(b=>b.addEventListener('click',()=>{
+  statsSub=b.dataset.ss;
+  document.querySelectorAll('#statsSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  $('#sub-gioc').style.display=statsSub==='gioc'?'block':'none';
+  $('#sub-palm').style.display=statsSub==='palm'?'block':'none';
+}));
+$('#fab').addEventListener('click',()=>{
+  if(page==='rosa')playerSheet({id:uid(),nome:'',r1:'',r2:'',r3:'',u21:false,squadra:'',valore:'',stip:'',rata1:'',rata2:'',status:'rosa'});
+  if(page==='bilancio')opSheet({id:uid(),data:new Date().toISOString().slice(0,10),op:'',dare:'',avere:'',pm:''},S.ops);
+  if(page==='mercato')mktSheet({id:uid(),nome:'',squadra:'',ruoli:'',vm:'',stip:'',rata1:'',rata2:'',prim:false});
+  if(page==='stats'&&statsSub==='gioc')statSheet({id:uid(),nome:'',ruolo:'',p:'',g:'',a:'',gone:false});
+  if(page==='stats'&&statsSub==='palm')palmSheet({id:uid(),stagione:S.season||'',comp:'campionato',dett:'',piazz:'',esito:''});
+});
+$('#addTrofeo').addEventListener('click',()=>trofSheet({id:uid(),titolo:'',anno:'',desc:'',img:''}));
+$('#budgetChip').addEventListener('click',()=>document.querySelector('#nav button[data-p="bilancio"]').click());
+$('#crest').addEventListener('click',clubSheet);
+function clubSheet(){
+  openSheet(body=>{
+    body.append(el('h3',{},'Società'));
+    const iN=tin(S.club),iS=tin(S.season,'text',null,{placeholder:'2026/27'});
+    const prev=el('div',{class:'kitbox',style:'aspect-ratio:1/1;max-width:140px'});
+    let tmp=S.logo;
+    const refresh=()=>{prev.innerHTML='';
+      if(tmp){prev.append(el('img',{src:tmp,alt:'logo'}));
+        prev.append(el('button',{class:'kx',title:'Rimuovi logo',onclick:e=>{e.stopPropagation();tmp='';refresh();}},'✕'));}
+      else prev.append(el('span',{},'+ Carica logo'));
+    };
+    prev.addEventListener('click',()=>pickImage(300,url=>{tmp=url;refresh();}));
+    refresh();
+    body.append(fld('Nome società',iN),fld('Stagione',iS),fld('Logo (visibile in ogni pagina)',prev));
+    body.append(actions(()=>{S.club=iN.value;S.season=iS.value;S.logo=tmp;save();closeSheet();renderAll();}));
+  });
+}
+$('#editSaldoIni').addEventListener('click',e=>{e.stopPropagation();
+  openSheet(body=>{
+    body.append(el('h3',{},'Saldo iniziale stagione'));
+    const i=tin(S.saldoIniziale,'number','0.1');
+    body.append(fld('Riporto dalla stagione precedente (mln)',i));
+    body.append(actions(()=>{S.saldoIniziale=i.value;save();closeSheet();renderAll();}));
+  });
+});
+$('#addClau').addEventListener('click',e=>{e.stopPropagation();clauSheet({id:uid(),desc:'',imp:'',scad:'fine',incl:true});});
+$('#addSeason').addEventListener('click',e=>{e.stopPropagation();seasonSheet({id:uid(),name:'',saldoIniziale:'',note:'',ops:[],kits:['','','']});});
+['pmAcq','pmVen','pmAnni'].forEach(id=>$('#'+id).addEventListener('input',pmCalcUpdate));
+$('#btnClub').addEventListener('click',clubSheet);
+$('#btnArchive').addEventListener('click',()=>{
+  if(!confirm('Archiviare la stagione '+S.season+'? Movimenti, clausole e divise passano nello Storico; il saldo finale diventa il saldo iniziale della nuova stagione.'))return;
+  const c=calc();
+  S.seasons.unshift({id:uid(),name:S.season,saldoIniziale:S.saldoIniziale,kits:S.kits,
+    note:S.clausole.map(x=>x.desc+' ('+(num(x.imp)>0?'+':'')+x.imp+')').join(' · '),ops:S.ops});
+  S.saldoIniziale=r2v(c.saldo);S.ops=[];S.clausole=S.clausole.filter(x=>!x.incl);S.mercato=[];S.kits=['','',''];
+  const y=(S.season||'').match(/^(\d{4})\/(\d{2})$/);
+  if(y)S.season=(+y[1]+1)+'/'+String(+y[2]+1).padStart(2,'0');
+  save();renderAll();alert('Stagione archiviata. Benvenuto nella '+S.season+'!');
+});
+$('#btnExport').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='FO_Manager_'+(S.season||'').replace('/','-')+'_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+});
+$('#btnImport').addEventListener('click',()=>$('#fileImport').click());
+$('#fileImport').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const d=JSON.parse(rd.result);if(!d.rosa||!d.ops)throw 0;
+    S=d;
+    if(!S.v||S.v<3){S.rosa.forEach(p=>{if(p.status==='prestito')p.status='prestout';if(p.status==='comp')p.status='compout';});S.v=3;}
+    if(S.v<4){S.rosa.forEach(p=>{if(p.status==='grigio'){p.status='rosa';p.grigio=true;}});S.v=4;}
+    S.rosa.forEach(p=>{if(p.grigio===undefined)p.grigio=false;if(p.img===undefined)p.img='';});
+    if(!S.seasons)S.seasons=[];if(!S.mercato)S.mercato=[];if(!S.clausole)S.clausole=[];
+    if(!S.palmares)S.palmares=[];if(!S.trofei)S.trofei=[];if(!S.kits)S.kits=['','',''];if(S.logo===undefined)S.logo='';
+    S.seasons.forEach(se=>{if(!se.kits)se.kits=['','',''];});
+    save();renderAll();alert('Backup importato.');
+  }catch(err){alert('File non valido: serve un backup JSON esportato da FO Manager.');}};
+  rd.readAsText(f);e.target.value='';
+});
+$('#regSearch').addEventListener('input',renderRegole);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet();});
+
+renderAll();renderRegole();
+
+</script>
+<script>
+try{
+  if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+}catch(e){}
+</script>
+</body>
+</html>
