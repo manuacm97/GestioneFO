@@ -34,7 +34,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 #crest{width:44px;height:44px;border-radius:4px;background:linear-gradient(135deg,#1E3A2B,#0F1F15);border:1px solid var(--line2);display:grid;place-items:center;font-weight:900;font-size:.95rem;color:var(--gold);flex:none;overflow:hidden;cursor:pointer;padding:0}
 #crest.haslogo{background:none;border-color:transparent}
 #crest img{width:100%;height:100%;object-fit:contain;background:transparent;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
-#wmark{position:fixed;right:-46px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 26px);width:320px;height:320px;object-fit:contain;opacity:.06;pointer-events:none;z-index:0;-webkit-mask-image:radial-gradient(closest-side,#000 50%,transparent 100%);mask-image:radial-gradient(closest-side,#000 50%,transparent 100%)}
+#wmark{position:fixed;right:-46px;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 26px);width:320px;height:320px;object-fit:contain;opacity:.06;pointer-events:none;z-index:0}
 main{position:relative;z-index:1}
 #top .who{min-width:0;flex:1}
 #top .who .nm{font-weight:800;font-size:1.1rem;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15;letter-spacing:-.01em}
@@ -109,10 +109,6 @@ main{max-width:820px;margin:0 auto;padding:12px 12px 0}
 
 /* avatar giocatori */
 .avatar{width:40px;height:40px;border-radius:4px;object-fit:cover;background:var(--surf2);border:none;flex:none;display:block}
-/* avatar composito stile FM: faccia + maglia home colorata */
-.fmav{position:relative;width:40px;height:40px;border-radius:4px;overflow:hidden;flex:none;background:linear-gradient(180deg,#16202C 0%,#0E141B 100%)}
-.fmav svg{position:absolute;left:50%;bottom:-8%;transform:translateX(-50%);width:104%;height:auto;z-index:1}
-.fmav .face{position:absolute;left:50%;top:4%;transform:translateX(-50%);width:56%;height:56%;object-fit:cover;border-radius:50%;z-index:2;background:var(--surf2)}
 
 /* team badge */
 .tb{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(255,255,255,.25);flex:none;vertical-align:-2px}
@@ -669,23 +665,7 @@ const SILH="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox
 function avatar(src,size){
   return el('img',{class:'avatar',src:src||SILH,alt:'',style:size?`width:${size}px;height:${size}px`:''});
 }
-/* composito stile Football Manager: busto con maglia home (colori squadra reale) + faccia */
-function jerseySVG(c1,c2){
-  return `<svg viewBox="0 0 60 34" xmlns="http://www.w3.org/2000/svg">`+
-    `<path d="M18 4 4 10l4 12 6-2v14h32V20l6 2 4-12L42 4c-2.5 4.5-7 7-12 7S20.5 8.5 18 4z" fill="${c1}" stroke="rgba(0,0,0,.35)" stroke-width="1.4" stroke-linejoin="round"/>`+
-    `<path d="M18 4c2.5 4.5 7 7 12 7s9.5-2.5 12-7l-4-1.8C36 5.8 33 7 30 7s-6-1.2-8-4.8z" fill="${c2}" stroke="rgba(0,0,0,.3)" stroke-width="1"/>`+
-    `<path d="M4 10l4 12 6-2-3.5-13z" fill="${c2}" opacity=".85"/>`+
-    `<path d="M56 10l-4 12-6-2 3.5-13z" fill="${c2}" opacity=".85"/>`+
-  `</svg>`;
-}
-function fmAvatar(img,squadra,size){
-  if(!img)return avatar('',size);
-  const c=teamColors(squadra)||['#2E3B4C','#1A2330'];
-  const w=el('span',{class:'fmav',style:size?`width:${size}px;height:${size}px`:''});
-  w.innerHTML=jerseySVG(c[0],c[1]);
-  w.append(el('img',{class:'face',src:img,alt:''}));
-  return w;
-}
+function fmAvatar(img,squadra,size){return avatar(img,size);}
 function photoOf(nome){
   const nm=String(nome||'').toLowerCase();
   const p=S.rosa.find(p=>(p.nome||'').toLowerCase()===nm);
@@ -840,9 +820,9 @@ function renderBilancio(){
   st.append(
     kpi('Saldo attuale',fmt(r2v(c.saldo),2),c.saldo<0?'ko':'ok'),
     kpi('− 1ª rata stipendi',fmt(r2v(c.sumR1),2)),
-    kpi('Proiez. 31/12',fmt(r2v(c.mid),2),c.mid<0?'ko':''),
+    kpi('Proiez. 31/12',fmt(r2v(c.mid),2),c.mid<0?'ko':'ok'),
     kpi('− 2ª rata stipendi',fmt(r2v(c.sumR2),2)),
-    kpi('Proiez. fine',fmt(r2v(c.end),2),c.end<0?'ko':''),
+    kpi('Proiez. fine',fmt(r2v(c.end),2),c.end<0?'ko':'ok'),
     kpi('Plus/Minus',(c.pmTot>0?'+':'')+fmt(r1v(c.pmTot)),c.pmTot>=0?'ok':'ko')
   );
   if(c.saldo<0||c.mid<0||c.end<0)st.append(kpi('⚠ Art. 53','Saldo neg. vietato','ko'));
@@ -951,8 +931,8 @@ function renderMercato(){
     kpi('Budget',fmt(r2v(c.saldo),2),'au'),
     kpi('Offerte in lista',fmt(r1v(k.totVM))),
     kpi('Dopo acquisti',fmt(r2v(k.after),2),k.after<0?'ko':'ok'),
-    kpi('Proiez. 31/12',fmt(r2v(k.mid),2),k.mid<0?'ko':''),
-    kpi('Proiez. fine',fmt(r2v(k.end),2),k.end<0?'ko':''),
+    kpi('Proiez. 31/12',fmt(r2v(k.mid),2),k.mid<0?'ko':'ok'),
+    kpi('Proiez. fine',fmt(r2v(k.end),2),k.end<0?'ko':'ok'),
     kpi('Posti liberi',`${Math.max(22-c.nMov,0)}M · ${Math.max(3-c.nPT,0)}P · ${Math.max(3-c.nPrim,0)}U`)
   );
   const bn=$('#mktBanner'); const msgs=[];
